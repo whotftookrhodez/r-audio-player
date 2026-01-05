@@ -3,8 +3,10 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QHBoxLayout>
+#include <QKeySequence>
 #include <QPixmap>
 #include <QPushButton>
+#include <QShortcut>
 #include <QStringList>
 #include <QVBoxLayout>
 
@@ -34,10 +36,18 @@ bool MainWindow::showCoverEnabled() const
 
 static QPixmap loadEmbeddedCover(const QString& filePath)
 {
-    const QByteArray pathUtf8 = QFile::encodeName(filePath);
+#ifdef Q_OS_WIN
+    const wchar_t* path = reinterpret_cast<const wchar_t*>(filePath.utf16());
+#else
+    const QByteArray path = filePath.toUtf8();
+#endif
 
     if (filePath.endsWith(".mp3", Qt::CaseInsensitive)) {
-        TagLib::MPEG::File f(pathUtf8.constData());
+#ifdef Q_OS_WIN
+        TagLib::MPEG::File f(path);
+#else
+        TagLib::MPEG::File f(path.constData());
+#endif
 
         if (auto* tag = f.ID3v2Tag()) {
             auto frames = tag->frameListMap()["APIC"];
@@ -45,20 +55,34 @@ static QPixmap loadEmbeddedCover(const QString& filePath)
             if (!frames.isEmpty()) {
                 auto* pic = static_cast<TagLib::ID3v2::AttachedPictureFrame*>(frames.front());
 
-                return QPixmap::fromImage(QImage::fromData(reinterpret_cast<const uchar*>(pic->picture().data()), pic->picture().size()));
+                return QPixmap::fromImage(
+                    QImage::fromData(
+                        reinterpret_cast<const uchar*>(pic->picture().data()),
+                        pic->picture().size()
+                    )
+                );
             }
         }
     }
 
     if (filePath.endsWith(".flac", Qt::CaseInsensitive)) {
-        TagLib::FLAC::File f(pathUtf8.constData());
+#ifdef Q_OS_WIN
+        TagLib::FLAC::File f(path);
+#else
+        TagLib::FLAC::File f(path.constData());
+#endif
 
         auto pics = f.pictureList();
 
         if (!pics.isEmpty()) {
             const auto* pic = pics.front();
 
-            return QPixmap::fromImage(QImage::fromData(reinterpret_cast<const uchar*>(pic->data().data()), pic->data().size()));
+            return QPixmap::fromImage(
+                QImage::fromData(
+                    reinterpret_cast<const uchar*>(pic->data().data()),
+                    pic->data().size()
+                )
+            );
         }
     }
 
@@ -305,6 +329,12 @@ MainWindow::MainWindow(Settings* s) : settings(s)
     auto prevBtn = new QPushButton("reverse", this);
     auto playBtn = new QPushButton("play / pause", this);
     auto nextBtn = new QPushButton("forward", this);
+
+    auto playPauseShortcut = new QShortcut(QKeySequence(Qt::Key_Space), this);
+    playPauseShortcut->setContext(Qt::ApplicationShortcut);
+
+    connect(playPauseShortcut, &QShortcut::activated, this,
+        &MainWindow::playSelected);
 
     autoplay = new QCheckBox("autoplay", this);
     autoplay->setChecked(settings->autoplay);
