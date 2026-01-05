@@ -283,7 +283,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
 
     lists->setSpacing(8);
     lists->addWidget(albums, 1);
-    lists->addWidget(tracks, 1);
+    lists->addWidget(tracks, 2);
 
     coverLabel = new QLabel(this);
     coverLabel->setFixedSize(64, 64);
@@ -477,6 +477,17 @@ void MainWindow::openSettings()
 
     connect(&dlg, &SettingsDialog::rescanRequested, this, [&]
         {
+            if (selAlbum >= 0) {
+                const auto& a = library.getAlbums()[selAlbum];
+
+                lastAlbumTitle = qs(a.title);
+                lastAlbumArtist = a.artists.empty() ? QString() : qs(a.artists.front());
+            }
+            else {
+                lastAlbumTitle.clear();
+                lastAlbumArtist.clear();
+            }
+
             std::vector<std::wstring> roots;
 
             for (const auto& f : settings->folders)
@@ -563,11 +574,35 @@ void MainWindow::populateAlbums()
             albums->addItem(item);
         }
     }
+
+    if (!lastAlbumTitle.isEmpty()) {
+        const auto& albumsVec = library.getAlbums();
+
+        for (int row = 0; row < albums->count(); ++row) {
+            auto* item = albums->item(row);
+            int idx = item->data(Qt::UserRole).toInt();
+            const auto& a = albumsVec[idx];
+
+            const QString title = qs(a.title);
+            const QString artist = a.artists.empty() ? QString() : qs(a.artists.front());
+
+            if (title == lastAlbumTitle && artist == lastAlbumArtist) {
+                albums->setCurrentRow(row);
+                selAlbum = idx;
+                populateTracks(idx);
+
+                break;
+            }
+        }
+    }
 }
 
 void MainWindow::populateTracks(int albumIndex)
 {
     tracks->clear();
+    curAlbum = albumIndex;
+    curTrack = -1;
+
     searchTrackOrder.clear();
 
     const QString q = searchText.trimmed().toLower();
