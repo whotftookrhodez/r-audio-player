@@ -31,8 +31,6 @@ private:
     QString searchText;
     QTimer timer;
     QVector<int> searchTrackOrder;
-    QString lastAlbumTitle;
-    QString lastAlbumArtist;
 
     Settings* settings = nullptr;
     Library library;
