@@ -283,7 +283,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
 
     lists->setSpacing(8);
     lists->addWidget(albums, 1);
-    lists->addWidget(tracks, 2);
+    lists->addWidget(tracks, 1);
 
     coverLabel = new QLabel(this);
     coverLabel->setFixedSize(64, 64);
@@ -568,9 +568,6 @@ void MainWindow::populateAlbums()
 void MainWindow::populateTracks(int albumIndex)
 {
     tracks->clear();
-    curAlbum = albumIndex;
-    curTrack = -1;
-
     searchTrackOrder.clear();
 
     const QString q = searchText.trimmed().toLower();
