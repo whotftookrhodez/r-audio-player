@@ -5,21 +5,20 @@
 #include <QVector>
 
 class QFileSystemModel;
-class QPushButton;
 class QTreeView;
+class QPushButton;
 
 class FolderDialog : public QDialog
 {
     Q_OBJECT
 public:
-    explicit FolderDialog(const QStringList& existingFolders,
+    explicit FolderDialog(
+        const QStringList& existingFolders,
         QWidget* parent = nullptr
     );
 
     QStringList selectedFolders() const;
 private:
-    void updateButtons();
-
     struct FolderEntry
     {
         QString raw;
@@ -28,8 +27,10 @@ private:
 
     QVector<FolderEntry> folders;
 
-    QFileSystemModel* model{ nullptr };
-    QTreeView* view{ nullptr };
-    QPushButton* addBtn{ nullptr };
-    QPushButton* continueBtn{ nullptr };
+    void updateButtons();
+
+    QFileSystemModel* model = nullptr;
+    QTreeView* view = nullptr;
+    QPushButton* addButton = nullptr;
+    QPushButton* continueButton = nullptr;
 };

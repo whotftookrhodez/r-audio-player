@@ -11,10 +11,12 @@ public:
 protected:
     void mousePressEvent(QMouseEvent* e) override
     {
-        if (e->button() == Qt::LeftButton) {
+        if (e->button() == Qt::LeftButton)
+        {
             int val;
 
-            if (orientation() == Qt::Horizontal) {
+            if (orientation() == Qt::Horizontal)
+            {
                 val = QStyle::sliderValueFromPosition(
                     minimum(),
                     maximum(),
@@ -22,7 +24,8 @@ protected:
                     width()
                 );
             }
-            else {
+            else
+            {
                 val = QStyle::sliderValueFromPosition(
                     minimum(),
                     maximum(),

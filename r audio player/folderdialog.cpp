@@ -1,4 +1,6 @@
+#include <QFileInfo>
 #include <QDir>
+#include <QCursor>
 #include <QScreen>
 #include <QGuiApplication>
 #include <QFileSystemModel>
@@ -15,13 +17,20 @@ namespace
 {
     QString normalizePath(const QString& path)
     {
-        QString normalized = QDir::fromNativeSeparators(QDir::cleanPath(path));
+        QFileInfo fi(path);
 
-#ifdef Q_OS_WIN
+        QString base = fi.exists()
+            ? fi.canonicalFilePath()
+            : path;
+
+        QString normalized = QDir::fromNativeSeparators(QDir::cleanPath(base));
+
+#if defined(_WIN32) || defined(__APPLE__)
         normalized = normalized.toLower();
 #endif
 
-        if (!normalized.endsWith('/')) {
+        if (!normalized.endsWith('/'))
+        {
             normalized += '/';
         }
 
@@ -34,20 +43,29 @@ namespace
     }
 }
 
-FolderDialog::FolderDialog(const QStringList& existingFolders, QWidget* parent)
-    : QDialog(parent)
+FolderDialog::FolderDialog(const QStringList& existingFolders, QWidget* parent) : QDialog(parent)
 {
     setWindowTitle("select music folder(s)");
     setModal(true);
-    setMinimumSize(582, 436);
+    setMinimumSize(582, 436); // relative to 640x480, rounded
 
-    if (QScreen* screen = QGuiApplication::primaryScreen()) {
-        const QRect available = screen->availableGeometry();
-        const QSize windowSize(
+    QPoint cursorPos = QCursor::pos();
+    QScreen* screen = QGuiApplication::screenAt(cursorPos);
+
+    if (!screen)
+    {
+        screen = QGuiApplication::primaryScreen();
+    }
+
+    if (screen)
+    {
+        QRect available = screen->availableGeometry();
+        QSize halfSize(
             available.width() / 2.2,
-            available.height() / 2.2);
+            available.height() / 2.2
+        );
 
-        resize(windowSize);
+        resize(halfSize);
         move(available.center() - rect().center());
     }
 
@@ -71,17 +89,15 @@ FolderDialog::FolderDialog(const QStringList& existingFolders, QWidget* parent)
     view->header()->setStretchLastSection(false);
     view->header()->setSectionResizeMode(0, QHeaderView::Stretch);
     view->setStyleSheet(R"(
-        /* base widgets */
-
         QDialog,
-        QWidget {
+        QWidget
+        {
             background-color: #1a1a1a;
             color: #e6e6e6;
         }
 
-        /* tree view */
-
-        QTreeView {
+        QTreeView
+        {
             background-color: #1a1a1a;
             color: #e6e6e6;
             border: 1px solid #333333;
@@ -90,78 +106,86 @@ FolderDialog::FolderDialog(const QStringList& existingFolders, QWidget* parent)
             show-drop-indicator: 0;
         }
 
-        QTreeView::item {
+        QTreeView::item
+        {
             padding: 4px;
             border: none;
         }
 
-        QTreeView::item:selected {
+        QTreeView::item:selected
+        {
             background-color: #333333;
             color: #e6e6e6;
         }
 
-        QTreeView::item:hover {
+        QTreeView::item:hover
+        {
             background-color: #333333;
         }
 
-        QTreeView::branch {
+        QTreeView::branch
+        {
             background: #1a1a1a;
             border: none;
         }
 
-        QTreeView::branch:selected {
+        QTreeView::branch:selected
+        {
             background: #333333;
         }
 
-        /* header */
-
-        QHeaderView {
+        QHeaderView
+        {
             background-color: #1a1a1a;
         }
 
-        QHeaderView::section {
+        QHeaderView::section
+        {
             background-color: #1a1a1a;
             color: #e6e6e6;
-            border: 1px solid #333333;
+            border: none;
             padding: 4px;
         }
 
-        QHeaderView::section:checked {
+        QHeaderView::section:checked
+        {
             background-color: #333333;
         }
 
-        /* buttons */
-
-        QPushButton {
+        QPushButton
+        {
             background-color: #1a1a1a;
             color: #e6e6e6;
             border: 1px solid #333333;
             padding: 6px 14px;
         }
 
-        QPushButton:hover {
+        QPushButton:hover
+        {
             background-color: #333333;
         }
 
-        QPushButton:pressed {
+        QPushButton:pressed
+        {
             background-color: #333333;
         }
 
-        QPushButton:disabled {
+        QPushButton:disabled
+        {
             color: #333333;
             border-color: #333333;
         }
 
-        /* scrollbars */
-
         QScrollBar:vertical,
-        QScrollBar:horizontal {
+        QScrollBar:horizontal
+        {
             background-color: #1a1a1a;
             border: 1px solid #333333;
         }
 
         QScrollBar::handle:vertical,
-        QScrollBar::handle:horizontal {
+        QScrollBar::handle:horizontal
+        {
             background-color: #333333;
             border: none;
             min-size: 20px;
@@ -170,32 +194,33 @@ FolderDialog::FolderDialog(const QStringList& existingFolders, QWidget* parent)
         QScrollBar::add-line,
         QScrollBar::sub-line,
         QScrollBar::add-page,
-        QScrollBar::sub-page {
+        QScrollBar::sub-page
+        {
             background: none;
             border: none;
         }
 
-        /* focus & selection cleanup */
-
-        *:focus {
+        *:focus
+        {
             outline: none;
             border: none;
         }
     )");
 
-    addBtn = new QPushButton("add", this);
-    continueBtn = new QPushButton("continue", this);
+    addButton = new QPushButton("add", this);
+    continueButton = new QPushButton("continue", this);
 
     auto* buttonsLayout = new QHBoxLayout;
     buttonsLayout->addStretch();
-    buttonsLayout->addWidget(addBtn);
-    buttonsLayout->addWidget(continueBtn);
+    buttonsLayout->addWidget(addButton);
+    buttonsLayout->addWidget(continueButton);
 
     auto* mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(view);
     mainLayout->addLayout(buttonsLayout);
 
-    for (const QString& raw : existingFolders) {
+    for (const QString& raw : existingFolders)
+    {
         folders.push_back({ raw, normalizePath(raw) });
     }
 
@@ -207,13 +232,15 @@ FolderDialog::FolderDialog(const QStringList& existingFolders, QWidget* parent)
     );
 
     connect(
-        addBtn,
+        addButton,
         &QPushButton::clicked,
         this,
-        [this] {
+        [this]
+        {
             const QModelIndex index = view->currentIndex();
 
-            if (!index.isValid() || !model->isDir(index)) {
+            if (!index.isValid() || !model->isDir(index))
+            {
                 return;
             }
 
@@ -221,29 +248,35 @@ FolderDialog::FolderDialog(const QStringList& existingFolders, QWidget* parent)
 
             QFileInfo fi(raw);
 
-            if (!fi.isReadable()) {
+            if (!fi.isReadable())
+            {
                 return;
             }
 
             const QString normalized = normalizePath(raw);
 
-            for (int i = folders.size() - 1; i >= 0; --i) {
-                if (isParentOf(normalized, folders[i].norm)) {
+            for (int i = folders.size() - 1; i >= 0; --i)
+            {
+                if (isParentOf(normalized, folders[i].norm))
+                {
                     folders.removeAt(i);
                 }
             }
 
-            for (const auto& folder : folders) {
-                if (isParentOf(folder.norm, normalized)) {
+            for (const auto& folder : folders)
+            {
+                if (isParentOf(folder.norm, normalized))
+                {
                     return;
                 }
             }
 
             folders.push_back({ raw, normalized });
-        });
+        }
+    );
 
     connect(
-        continueBtn,
+        continueButton,
         &QPushButton::clicked,
         this,
         &QDialog::accept
@@ -256,7 +289,8 @@ QStringList FolderDialog::selectedFolders() const
 {
     QStringList result;
 
-    for (const auto& folder : folders) {
+    for (const auto& folder : folders)
+    {
         result << folder.raw;
     }
 
@@ -269,6 +303,6 @@ void FolderDialog::updateButtons()
     const bool validFolder = index.isValid()
         && model->isDir(index);
 
-    addBtn->setEnabled(validFolder);
-    continueBtn->setEnabled(true);
+    addButton->setEnabled(validFolder);
+    continueButton->setEnabled(true); // questionable
 }

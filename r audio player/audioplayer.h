@@ -7,7 +7,6 @@
 class AudioPlayer
 {
 public:
-    AudioPlayer();
     ~AudioPlayer();
 
     bool init();
@@ -16,20 +15,20 @@ public:
     void stop();
     void toggle();
     void pause();
-    void resume();
+    void run();
     void setVolume(float volume);
     void seek(double seconds);
 
     double length() const;
-    double position() const;
+    double cursor() const;
 
-    bool loaded() const;
+    bool _soundInit() const;
     bool playing() const;
     bool finished() const;
 private:
+    bool engineInit{};
+    bool soundInit{};
+
     ma_engine engine{};
     ma_sound sound{};
-
-    bool engineReady{ false };
-    bool soundLoaded{ false };
 };

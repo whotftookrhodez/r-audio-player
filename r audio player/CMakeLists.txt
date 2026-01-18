@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(r_audio_player
-    VERSION 1.0
+    VERSION 1.0.2
     LANGUAGES CXX
 )
 
@@ -13,8 +13,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 set(BUILD_SHARED_LIBS OFF)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
-find_package(ZLIB REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
 find_package(TagLib REQUIRED)
 
 add_executable(r_audio_player WIN32
@@ -22,6 +21,7 @@ add_executable(r_audio_player WIN32
     main.cpp
     audioplayer.h
     audioplayer.cpp
+    clickslider.h
     folderdialog.h
     folderdialog.cpp
     library.h
@@ -41,17 +41,23 @@ target_compile_definitions(r_audio_player PRIVATE
 
 target_link_libraries(r_audio_player PRIVATE
     Qt6::Widgets
+    Qt6::Network
     TagLib::TagLib
 )
 
 set_target_properties(r_audio_player PROPERTIES
-    WIN32_EXECUTABLE TRUE
     OUTPUT_NAME "r audio player"
 )
 
 if (WIN32)
+    find_program(WINDEPLOYQT_EXECUTABLE
+        NAMES windeployqt
+        HINTS "${Qt6_DIR}/../../../bin"
+        REQUIRED
+    )
+
     add_custom_command(TARGET r_audio_player POST_BUILD
-        COMMAND "C:/Qt/6.10.1/msvc2022_64/bin/windeployqt.exe"
+        COMMAND "${WINDEPLOYQT_EXECUTABLE}"
                 --release
                 --compiler-runtime
                 --no-translations

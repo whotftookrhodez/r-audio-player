@@ -4,19 +4,20 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QLockFile>
+#include <QCursor>
 #include <QScreen>
 #include <QGuiApplication>
 
 #include "settings.h"
 #include "mainwindow.h"
 
-int main(int argc, char* argv[])
+int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
 
     QCoreApplication::setApplicationName("r audio player");
     QCoreApplication::setOrganizationName("r");
-    QCoreApplication::setOrganizationDomain("github.com/whotftookrhodez/raudioplayer");
+    QCoreApplication::setOrganizationDomain("github.com/whotftookrhodez/r-audio-player");
 
     const QIcon appIcon(":/r audio player.ico");
 
@@ -26,11 +27,16 @@ int main(int argc, char* argv[])
 
     QDir().mkpath(lockPath);
 
-    QLockFile lock(lockPath + "/instance.lock");
+    QLockFile lock(QDir(lockPath).filePath("instance.lock"));
 
+#ifdef _WIN32
     lock.setStaleLockTime(0);
+#else
+    lock.setStaleLockTime(1);
+#endif
 
-    if (!lock.tryLock(0)) {
+    if (!lock.tryLock(0))
+    {
         return 0;
     }
 
@@ -43,12 +49,21 @@ int main(int argc, char* argv[])
     window.setWindowIcon(appIcon);
     window.setMinimumSize(640, 480);
 
-    QScreen* screen = QGuiApplication::primaryScreen();
+    QPoint cursorPos = QCursor::pos();
+    QScreen* screen = QGuiApplication::screenAt(cursorPos);
 
-    if (screen) {
+    if (!screen)
+    {
+        screen = QGuiApplication::primaryScreen();
+    }
+
+    if (screen)
+    {
         QRect available = screen->availableGeometry();
-        QSize halfSize(available.width() / 2,
-            available.height() / 2);
+        QSize halfSize(
+            available.width() / 2,
+            available.height() / 2
+        );
 
         window.resize(halfSize);
         window.move(available.center() - window.rect().center());

@@ -2,36 +2,38 @@
 
 #include <string>
 #include <vector>
+#include <filesystem>
 #include <unordered_map>
 
-struct Track {
-    std::vector<std::wstring> artists;
-    std::wstring path;
-    std::wstring title;
-    std::wstring album;
-
+struct Track
+{
     unsigned int trackNo = 0;
+
+    std::string album;
+    std::vector<std::string> artists;
+    std::string path;
+    std::string title;
 };
 
-struct Album {
-    std::vector<std::wstring> artists;
+struct Album
+{
     bool variousArtists = false;
 
-    std::wstring title;
+    std::vector<std::string> artists;
+    std::string title;
     std::vector<Track> tracks;
 };
 
-class Library {
+class Library
+{
 public:
-    void scan(const std::vector<std::wstring>& roots);
+    void scan(const std::vector<std::filesystem::path>& roots);
 
     const std::vector<Album>& getAlbums() const { return albums; }
 private:
-    static bool isAudioFile(const std::wstring& ext);
-
     std::vector<Album> albums;
-    std::unordered_map<std::wstring, size_t> albumIndex;
+    std::unordered_map<std::string, size_t> albumIndex;
 
-    void scanFolderRecursive(const std::wstring& folder);
+    void scanFolderRecursive(const std::filesystem::path& folder);
     void addTrack(Track&& track);
 };

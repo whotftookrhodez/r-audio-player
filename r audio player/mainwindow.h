@@ -1,16 +1,23 @@
 #pragma once
 
-#include <QCheckBox>
-#include <QLabel>
+#include <QWidget>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QSlider>
+#include <QLabel>
+#include <QCheckBox>
+#include <QPushButton>
 #include <QTimer>
-#include <QWidget>
+#include <QSlider>
 
-#include "audioplayer.h"
-#include "library.h"
+#include <QDateTime> // for nam
+#include <QNetworkAccessManager>
+#include <QUrlQuery>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+
 #include "settings.h"
+#include "library.h"
+#include "audioplayer.h"
 
 class MainWindow : public QWidget
 {
@@ -18,37 +25,45 @@ class MainWindow : public QWidget
 public:
     explicit MainWindow(Settings* settings);
 private:
-    QCheckBox* autoplay = nullptr;
-    QLabel* coverLabel;
-    QLabel* nowPlaying = nullptr;
-    QLineEdit* search;
-    QListWidget* albums = nullptr;
-    QListWidget* tracks = nullptr;
-    QSet<int> albumMatchedByAlbum;
-    QSlider* progress = nullptr;
-    QSlider* volume = nullptr;
-    QString formatTrack(const Track& t) const;
-    QString searchText;
-    QTimer timer;
-    QVector<int> searchTrackOrder;
-
     Settings* settings = nullptr;
     Library library;
     AudioPlayer audio;
 
-    int curAlbum = -1;
-    int curTrack = -1;
-    int selAlbum = -1;
-    int selTrack = -1;
+    QLineEdit* search = nullptr;
+    QString searchText;
+    QVector<int> searchTrackOrder;
+    QSet<int> albumMatchedByAlbum;
+    QListWidget* albums = nullptr;
+    QString formatTrack(const Track& t) const;
+    QListWidget* tracks = nullptr;
+    QLabel* coverLabel = nullptr;
+    QLabel* nowPlaying = nullptr;
+    QVector<QPushButton*> iconButtonsList;
+    QCheckBox* autoplay = nullptr;
+    QTimer timer;
+    QSlider* cursorSlider = nullptr;
+    QSlider* volumeSlider = nullptr;
+    QNetworkAccessManager* nam = nullptr;
 
-    bool playingFromSearch = false;
-    bool showCoverEnabled() const;
-
-    void openSettings();
+    void lastfmUpdateNowPlaying(const Track& t);
+    void lastfmScrobbleTrack(const Track& t);
+    void updateControlsText();
     void populateAlbums();
     void populateTracks(int albumIndex);
-    void playSelected();
     void playFirstOfAlbum(int albumIndex);
     void play(int albumIndex, int trackIndex);
+    void playSelected();
+    void openSettings();
     void updateNowPlaying();
+
+    int selAlbum = -1;
+    int selTrack = -1;
+    int curAlbum = -1;
+    int curTrack = -1;
+
+    double scrobbleThreshold = 0.5;
+
+    bool scrobbledThisTrack = false;
+    bool playingFromSearch = false;
+    bool showCoverEnabled() const;
 };
