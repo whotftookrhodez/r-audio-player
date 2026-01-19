@@ -778,6 +778,16 @@ MainWindow::MainWindow(Settings* s) : settings(s)
 
                             tracks->setCurrentRow(row + 1);
                         }
+                        else
+                        {
+                            audio.stop();
+
+                            curAlbum = -1;
+                            curTrack = -1;
+
+                            //lastfmUpdateNowPlaying();
+                            updateNowPlaying();
+                        }
                     }
 
                     return;
