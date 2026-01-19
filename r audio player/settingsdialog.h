@@ -6,6 +6,7 @@
 
 class QListWidget;
 class QPushButton;
+class QSpinBox;
 class QCheckBox;
 
 class SettingsDialog : public QDialog
@@ -15,6 +16,7 @@ public:
     explicit SettingsDialog(
         const QStringList& musicFolders,
         bool autoplay,
+        int coverSize,
         const QStringList& trackFormat,
         bool iconButtons,
         const QString& lastfmUsername,
@@ -24,6 +26,8 @@ public:
 
     QString getlastfmUsername() const { return lastfmUsernameEdit->text(); }
     QString getlastfmSessionKey() const { return lastfmSessionKey; }
+
+    int selectedCoverSize() const;
 
     bool selectedIconButtons() const;
 
@@ -41,6 +45,7 @@ private:
     QPushButton* addButton = nullptr;
     QPushButton* removeButton = nullptr;
     QPushButton* rescanButton = nullptr;
+    QSpinBox* coverSizeSpin = nullptr;
     QCheckBox* coverCheck = nullptr;
     QCheckBox* artistCheck = nullptr;
     QCheckBox* albumCheck = nullptr;

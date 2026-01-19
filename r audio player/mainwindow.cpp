@@ -278,6 +278,57 @@ MainWindow::MainWindow(Settings* s) : settings(s)
             outline: none;
         }
 
+        QSpinBox
+        {
+            background-color: #1a1a1a;
+            color: #e6e6e6;
+            border: 1px solid #333333;
+            padding: 6px;
+            selection-background-color: #333333;
+            selection-color: #e6e6e6;
+        }
+
+        QSpinBox::up-button,
+        QSpinBox::down-button
+        {
+            subcontrol-origin: border;
+            width: 18px;
+            border-left: 1px solid #333333;
+            background-color: #1a1a1a;
+        }
+
+        QSpinBox::up-button
+        {
+            subcontrol-position: top right;
+            height: 50%;
+            border-bottom: 1px solid #333333;
+        }
+
+        QSpinBox::down-button
+        {
+            subcontrol-position: bottom right;
+            height: 50%;
+        }
+
+        QSpinBox::up-button:hover,
+        QSpinBox::down-button:hover
+        {
+            background-color: #333333;
+        }
+
+        QSpinBox::up-button:pressed,
+        QSpinBox::down-button:pressed
+        {
+            background-color: #333333;
+        }
+
+        QSpinBox::up-arrow,
+        QSpinBox::down-arrow
+        {
+            width: 0px;
+            height: 0px;
+        }
+
         QCheckBox
         {
             spacing: 6px;
@@ -448,7 +499,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
     lists->addWidget(tracks, 2);
 
     coverLabel = new QLabel(this);
-    coverLabel->setFixedSize(70, 70);
+    coverLabel->setFixedSize(settings->coverSize, settings->coverSize);
     coverLabel->setScaledContents(true);
     coverLabel->hide();
 
@@ -456,7 +507,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
     nowPlaying->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
 
     auto nowPlayingLayout = new QHBoxLayout;
-    nowPlayingLayout->setSpacing(10);
+    nowPlayingLayout->setSpacing(6);
     nowPlayingLayout->setAlignment(Qt::AlignCenter);
     nowPlayingLayout->addWidget(coverLabel);
     nowPlayingLayout->addWidget(nowPlaying);
@@ -962,6 +1013,7 @@ void MainWindow::openSettings()
     SettingsDialog dlg(
         settings->folders,
         settings->autoplay,
+        settings->coverSize,
         settings->trackFormat,
         settings->iconButtons,
         settings->lastfmUsername,
@@ -1008,6 +1060,7 @@ void MainWindow::openSettings()
     const bool foldersChanged = dlg.selectedFolders() != settings->folders;
 
     settings->folders = dlg.selectedFolders();
+    settings->coverSize = dlg.selectedCoverSize();
     settings->trackFormat = dlg.selectedTrackFormat();
     settings->iconButtons = dlg.selectedIconButtons();
 
@@ -1037,6 +1090,8 @@ void MainWindow::openSettings()
 
         populateAlbums();
     }
+
+    coverLabel->setFixedSize(settings->coverSize, settings->coverSize);
 
     updateNowPlaying();
 }
@@ -1128,6 +1183,8 @@ void MainWindow::updateNowPlaying()
 
         return;
     }
+
+    coverLabel->setFixedSize(settings->coverSize, settings->coverSize); // not needed, but nice to have
 
     QPixmap cover;
 

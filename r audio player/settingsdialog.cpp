@@ -7,6 +7,7 @@
 #include <QGuiApplication>
 #include <QListWidget>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QCheckBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -22,6 +23,11 @@
 #include <QJsonObject>
 #include <QMessageBox>
 
+int SettingsDialog::selectedCoverSize() const
+{
+    return coverSizeSpin->value();
+}
+
 bool SettingsDialog::selectedIconButtons() const
 {
     return iconButtonsCheck->isChecked();
@@ -30,6 +36,7 @@ bool SettingsDialog::selectedIconButtons() const
 SettingsDialog::SettingsDialog(
     const QStringList& musicFolders,
     bool /* autoplay */,
+    int coverSize,
     const QStringList& trackFormat,
     bool iconButtons,
     const QString& lastfmUsername,
@@ -106,6 +113,13 @@ SettingsDialog::SettingsDialog(
     folderButtons->addWidget(removeButton);
     folderButtons->addWidget(rescanButton);
 
+    coverSizeSpin = new QSpinBox(this);
+    coverSizeSpin->setRange(35, 105);
+    coverSizeSpin->setPrefix("cover size (35-105): ");
+    coverSizeSpin->setSuffix(" px");
+    coverSizeSpin->setMinimumWidth(coverSizeSpin->fontMetrics().horizontalAdvance("cover size (35-105): 105 px"));
+    coverSizeSpin->setValue(coverSize);
+
     coverCheck = new QCheckBox("cover", this);
     artistCheck = new QCheckBox("artist", this);
     albumCheck = new QCheckBox("album", this);
@@ -120,12 +134,13 @@ SettingsDialog::SettingsDialog(
     iconButtonsCheck->setChecked(iconButtons);
 
     auto formatLayout = new QHBoxLayout;
-    formatLayout->addStretch();
+    //formatLayout->addStretch();
+    formatLayout->addWidget(coverSizeSpin);
     formatLayout->addWidget(coverCheck);
     formatLayout->addWidget(artistCheck);
     formatLayout->addWidget(albumCheck);
     formatLayout->addWidget(trackCheck);
-    formatLayout->addStretch();
+    //formatLayout->addStretch();
 
     auto iconButtonsLayout = new QHBoxLayout;
     iconButtonsLayout->addStretch();

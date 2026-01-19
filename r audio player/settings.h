@@ -8,6 +8,7 @@ struct Settings
     QStringList folders;
     bool autoplay = true;
     float volume = 1.0f;
+    int coverSize = 70;
     QStringList trackFormat = { "cover", "artist", "track" };
     bool iconButtons = false;
     QString lastfmUsername;
@@ -16,14 +17,15 @@ struct Settings
     static constexpr const char* K_FOLDERS = "folders";
     static constexpr const char* K_AUTOPLAY = "autoplay";
     static constexpr const char* K_VOLUME = "volume";
+    static constexpr const char* K_COVERSIZE = "coverSize";
     static constexpr const char* K_TRACKFORMAT = "trackFormat";
     static constexpr const char* K_ICONBUTTONS = "iconButtons";
     static constexpr const char* K_LASTFM_USERNAME = "lastfmUsername";
     static constexpr const char* K_LASTFM_SESSIONKEY = "lastfmSessionKey";
 
     // hide in release
-    static constexpr const char* LASTFM_API_KEY = "";
-    static constexpr const char* LASTFM_API_SECRET = "";
+    static constexpr const char* LASTFM_API_KEY = "73141291e72e8cd841e0fbe8937b5b85";
+    static constexpr const char* LASTFM_API_SECRET = "4859b947234fcddff386febc1f73b579";
 
     void load()
     {
@@ -32,6 +34,7 @@ struct Settings
         folders = s.value(K_FOLDERS, folders).toStringList();
         autoplay = s.value(K_AUTOPLAY, autoplay).toBool();
         volume = s.value(K_VOLUME, volume).toFloat();
+        coverSize = s.value(K_COVERSIZE, coverSize).toInt();
         trackFormat = s.value(K_TRACKFORMAT, trackFormat).toStringList();
         iconButtons = s.value(K_ICONBUTTONS, iconButtons).toBool();
         lastfmUsername = s.value(K_LASTFM_USERNAME, "").toString();
@@ -45,6 +48,7 @@ struct Settings
         s.setValue(K_FOLDERS, folders);
         s.setValue(K_AUTOPLAY, autoplay);
         s.setValue(K_VOLUME, volume);
+        s.setValue(K_COVERSIZE, coverSize);
         s.setValue(K_TRACKFORMAT, trackFormat);
         s.setValue(K_ICONBUTTONS, iconButtons);
         s.setValue(K_LASTFM_USERNAME, lastfmUsername);
