@@ -36,6 +36,19 @@ static QString qs(const std::wstring& w)
     return QString::fromStdWString(w);
 }
 
+int MainWindow::visibleRowForTrackIndex(int trackIndex) const
+{
+    for (int i = 0; i < int(searchTrackOrder.size()); ++i)
+    {
+        if (searchTrackOrder[i] == trackIndex)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 void MainWindow::lastfmUpdateNowPlaying(const Track& t)
 {
     if (settings->lastfmSessionKey.isEmpty())
@@ -754,18 +767,16 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                 {
                     if (settings->autoplay)
                     {
-                        const auto& album = library.getAlbums()[curAlbum];
+                        const int row = visibleRowForTrackIndex(curTrack);
 
-                        if (curTrack + 1 < int(album.tracks.size()))
+                        if (row >= 0
+                            && row + 1 < int(searchTrackOrder.size()))
                         {
-                            curTrack++;
+                            const int nextTrackIndex = searchTrackOrder[row + 1];
 
-                            play(
-                                curAlbum,
-                                curTrack
-                            );
+                            play(curAlbum, nextTrackIndex);
 
-                            tracks->setCurrentRow(curTrack);
+                            tracks->setCurrentRow(row + 1);
                         }
                     }
 

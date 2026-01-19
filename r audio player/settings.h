@@ -23,7 +23,7 @@ struct Settings
     static constexpr const char* K_LASTFM_USERNAME = "lastfmUsername";
     static constexpr const char* K_LASTFM_SESSIONKEY = "lastfmSessionKey";
 
-    // hide in release
+    // why not
     static constexpr const char* LASTFM_API_KEY = "73141291e72e8cd841e0fbe8937b5b85";
     static constexpr const char* LASTFM_API_SECRET = "4859b947234fcddff386febc1f73b579";
 

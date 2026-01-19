@@ -45,6 +45,12 @@ private:
     QSlider* volumeSlider = nullptr;
     QNetworkAccessManager* nam = nullptr;
 
+    int visibleRowForTrackIndex(int trackIndex) const;
+    int selAlbum = -1;
+    int selTrack = -1;
+    int curAlbum = -1;
+    int curTrack = -1;
+
     void lastfmUpdateNowPlaying(const Track& t);
     void lastfmScrobbleTrack(const Track& t);
     void updateControlsText();
@@ -55,11 +61,6 @@ private:
     void playSelected();
     void openSettings();
     void updateNowPlaying();
-
-    int selAlbum = -1;
-    int selTrack = -1;
-    int curAlbum = -1;
-    int curTrack = -1;
 
     double scrobbleThreshold = 0.5;
 
