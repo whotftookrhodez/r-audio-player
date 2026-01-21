@@ -1,1 +1,4 @@
+CMakeLists.txt linguist-language=CMake
+*.cmake linguist-language=CMake
+*.rc linguist-language=C++
 *.h linguist-language=C++
