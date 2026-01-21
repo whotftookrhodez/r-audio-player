@@ -1,4 +1,5 @@
-*.txt linguist-language=C-Make
-*.rc linguist-language=C++
 *.h linguist-language=C++
+*.rc linguist-language=C++
 *.qrc linguist-language=XML
+*.cmake linguist-language=CMake
+CMakeLists.txt linguist-language=CMake
