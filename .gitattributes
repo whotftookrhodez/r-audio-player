@@ -1,5 +1,7 @@
 *.h linguist-language=C++
-*.rc linguist-language=C++
+*.rc linguist-language=RC
 *.qrc linguist-language=XML
 *.cmake linguist-language=CMake
+*.cmake text eol=lf
 CMakeLists.txt linguist-language=CMake
+CMakeLists.txt text eol=lf linguist-language=CMake
