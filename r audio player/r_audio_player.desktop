@@ -1,7 +1,7 @@
 [Desktop Entry]
 
 Type=Application
-Version="1.0.4"
+Version=1.0.4
 Name=r audio player
 Comment=lightweight audio player
 Exec=r_audio_player
