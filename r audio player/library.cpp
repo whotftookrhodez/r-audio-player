@@ -7,6 +7,7 @@
 #include <taglib/fileref.h>
 #include <taglib/tpropertymap.h>
 #include <taglib/tag.h>
+#include <taglib/wavfile.h>
 
 #include "library.h"
 
@@ -67,7 +68,7 @@ namespace
 
         return TagLib::FileRef(wp.c_str());
 #else
-        const std::string up = u8_to_string(p);
+        const std::string up = u8ToString(p);
 
         return TagLib::FileRef(up.c_str());
 #endif
@@ -232,32 +233,91 @@ void Library::scanFolderRecursive(const fs::path& folder)
             continue;
         }
 
-        TagLib::FileRef ref = openFileRef(path);
-
-        if (ref.isNull())
-        {
-            continue;
-        }
-
-        const std::string artist = extractArtistLiteral(ref);
-
-        if (artist.empty())
-        {
-            continue;
-        }
+        const std::string ext = toLowerAscii(u8ToString(path.extension()));
 
         Track track{};
 
-        track.artists = { artist };
         track.path = pathToUtf8String(path);
 
-        if (ref.tag())
+        if (ext == ".wav")
         {
-            auto* tag = ref.tag();
+#ifdef _WIN32
+            TagLib::RIFF::WAV::File file(path.wstring().c_str());
+#else
+            TagLib::RIFF::WAV::File file(u8ToString(path).c_str());
+#endif
+            if (!file.isValid())
+            {
+                continue;
+            }
 
-            track.title = trimAscii(toUtf8(tag->title()));
-            track.trackNo = tag->track();
-            track.album = trimAscii(toUtf8(tag->album()));
+            std::string artist;
+
+            if (file.tag())
+            {
+                artist = trimAscii(toUtf8(file.tag()->artist()));
+
+                track.title = trimAscii(toUtf8(file.tag()->title()));
+                track.trackNo = file.tag()->track();
+                track.album = trimAscii(toUtf8(file.tag()->album()));
+            }
+
+            if (artist.empty()
+                && !track.title.empty())
+            {
+                const TagLib::PropertyMap props = file.properties();
+
+                for (auto itp = props.begin(); itp != props.end(); ++itp)
+                {
+                    const std::string key = toLowerAscii(toUtf8(itp->first));
+
+                    if (key.find("artist") != std::string::npos
+                        && !itp->second.isEmpty())
+                    {
+                        artist = trimAscii(toUtf8(itp->second.front()));
+
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                continue;
+            }
+
+            if (artist.empty())
+            {
+                continue;
+            }
+
+            track.artists = { artist };
+        }
+        else
+        {
+            TagLib::FileRef ref = openFileRef(path);
+
+            if (ref.isNull())
+            {
+                continue;
+            }
+
+            const std::string artist = extractArtistLiteral(ref);
+
+            if (artist.empty())
+            {
+                continue;
+            }
+
+            track.artists = { artist };
+
+            if (ref.tag())
+            {
+                auto* tag = ref.tag();
+
+                track.title = trimAscii(toUtf8(tag->title()));
+                track.trackNo = tag->track();
+                track.album = trimAscii(toUtf8(tag->album()));
+            }
         }
 
         if (track.title.empty())

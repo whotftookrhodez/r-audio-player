@@ -132,12 +132,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="audioplayer.h" />
+    <ClInclude Include="clickslider.h" />
     <ClInclude Include="folderdialog.h" />
     <ClInclude Include="library.h" />
     <ClInclude Include="mainwindow.h" />
+    <ClInclude Include="miniaudio.h" />
     <ClInclude Include="settings.h" />
     <ClInclude Include="settingsdialog.h" />
-    <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="audioplayer.cpp" />
@@ -145,17 +146,25 @@
     <ClCompile Include="library.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mainwindow.cpp" />
+    <ClCompile Include="miniaudio_implementation.cpp" />
     <ClCompile Include="settingsdialog.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="r audio player.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="..\..\..\..\Pictures\r audio player.ico" />
-    <Image Include="..\..\..\..\Pictures\small.ico" />
-  </ItemGroup>
-  <ItemGroup>
     <Text Include="CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="app.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="backward.svg" />
+    <None Include="forward.svg" />
+    <None Include="playpause.svg" />
+    <None Include="resources.qrc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="r audio player.ico" />
+    <Image Include="r_audio_player.png" />
+    <Image Include="small.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

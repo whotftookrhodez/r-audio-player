@@ -1,5 +1,8 @@
 <RCC>
 	<qresource prefix="/">
 		<file>r audio player.ico</file>
+		<file>backward.svg</file>
+		<file>playpause.svg</file>
+		<file>forward.svg</file>
 	</qresource>
 </RCC>

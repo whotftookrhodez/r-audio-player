@@ -25,6 +25,9 @@ public:
     bool _soundInit() const;
     bool playing() const;
     bool finished() const;
+
+    QString formattedCursor() const;
+    QString formattedLength() const;
 private:
     bool engineInit{};
     bool soundInit{};

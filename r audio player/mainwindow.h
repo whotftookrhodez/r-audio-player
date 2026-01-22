@@ -39,11 +39,16 @@ private:
     QLabel* coverLabel = nullptr;
     QLabel* nowPlaying = nullptr;
     QVector<QPushButton*> iconButtonsList;
+    QIcon backwardIcon;
+    QIcon playPauseIcon;
+    QIcon forwardIcon;
     QCheckBox* autoplay = nullptr;
     QTimer timer;
     QSlider* cursorSlider = nullptr;
+    QLabel* cursorText = nullptr;
     QSlider* volumeSlider = nullptr;
     QNetworkAccessManager* nam = nullptr;
+    QString currentPlayingPath() const;
 
     int visibleRowForTrackIndex(int trackIndex) const;
     int selAlbum = -1;
@@ -62,9 +67,10 @@ private:
     void openSettings();
     void updateNowPlaying();
 
-    double scrobbleThreshold = 0.5;
+    double scrobbleThreshold = 0.9;
 
     bool scrobbledThisTrack = false;
     bool playingFromSearch = false;
     bool showCoverEnabled() const;
+    bool rebindCurrentByPath(const QString& path);
 };

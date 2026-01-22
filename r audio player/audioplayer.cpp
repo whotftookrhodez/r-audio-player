@@ -1,8 +1,4 @@
-﻿#define MINIAUDIO_IMPLEMENTATION
-
-#ifdef _WIN32
-#define MA_WIN32_USE_WCHAR
-#endif
+﻿#include <QString>
 
 #include "audioplayer.h"
 
@@ -74,11 +70,6 @@ bool AudioPlayer::play(const QString& path)
     }
 #endif
 
-    ma_sound_set_volume(
-        &sound,
-        ma_engine_get_volume(&engine)
-    );
-
     ma_sound_start(&sound);
 
     soundInit = true;
@@ -136,14 +127,6 @@ void AudioPlayer::setVolume(float volume)
             &engine,
             volume
         );
-
-        if (soundInit)
-        {
-            ma_sound_set_volume(
-                &sound,
-                volume
-            );
-        }
     }
 }
 
@@ -226,4 +209,81 @@ bool AudioPlayer::finished() const
     );
 
     return currentFrame >= totalFrames;
+}
+
+QString AudioPlayer::formattedCursor() const
+{
+    const int len = int(length() + 0.5);
+    const int lh = len / 3600;
+    const int lm = (len % 3600) / 60;
+    const int cur = int(cursor() + 0.5);
+    const int h = cur / 3600;
+    const int m = (cur % 3600) / 60;
+    const int s = cur % 60;
+
+    if (lh > 0)
+    {
+        return QString("%1:%2:%3").arg(
+            h,
+            lh >= 10
+            ? 2
+            : 1,
+            10,
+            QChar('0')
+        ).arg(
+            m,
+            2,
+            10,
+            QChar('0')
+        ).arg(
+            s,
+            2,
+            10,
+            QChar('0')
+        );
+    }
+
+    return QString("%1:%2").arg(
+        m,
+        lm >= 10
+        ? 2
+        : 1,
+        10,
+        QChar('0')
+    ).arg(
+        s,
+        2,
+        10,
+        QChar('0')
+    );
+}
+
+QString AudioPlayer::formattedLength() const
+{
+    const int len = int(length() + 0.5);
+    const int h = len / 3600;
+    const int m = (len % 3600) / 60;
+    const int s = len % 60;
+
+    if (h > 0)
+    {
+        return QString("%1:%2:%3").arg(h).arg(
+            m,
+            2,
+            10,
+            QChar('0')
+        ).arg(
+            s,
+            2,
+            10,
+            QChar('0')
+        );
+    }
+
+    return QString("%1:%2").arg(m).arg(
+        s,
+        2,
+        10,
+        QChar('0')
+    );
 }

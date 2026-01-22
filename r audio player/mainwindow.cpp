@@ -6,6 +6,7 @@
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QKeySequence>
+#include <QLabel>
 #include <QPixmap>
 #include <QPushButton>
 #include <QShortcut>
@@ -231,6 +232,10 @@ void MainWindow::lastfmScrobbleTrack(const Track& t)
 
 MainWindow::MainWindow(Settings* s) : settings(s)
 {
+    // definitely a few redundancies in the stylesheet
+    // throwing in it is safe (verify with Terminal=true)
+    // plus they're convenient for adding later
+    // thus don't bother
     qApp->setStyleSheet(R"(
         QWidget
         {
@@ -539,6 +544,10 @@ MainWindow::MainWindow(Settings* s) : settings(s)
         forwardButton
     };
 
+    backwardIcon = QIcon(":/backward.svg");
+    playPauseIcon = QIcon(":/playpause.svg");
+    forwardIcon = QIcon(":/forward.svg");
+
     updateControlsText();
 
     autoplay = new QCheckBox("autoplay", this);
@@ -548,6 +557,10 @@ MainWindow::MainWindow(Settings* s) : settings(s)
 
     cursorSlider = new ClickSlider(Qt::Horizontal, this);
     cursorSlider->setRange(0, 2147483647);
+
+    cursorText = new QLabel("", this);
+    cursorText->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
+    cursorText->setMinimumWidth(cursorText->fontMetrics().horizontalAdvance(""));
 
     volumeSlider = new ClickSlider(Qt::Horizontal, this);
     volumeSlider->setRange(0, 100);
@@ -567,6 +580,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
     controls->addWidget(forwardButton);
     controls->addWidget(autoplay, 0, Qt::AlignHCenter);
     controls->addWidget(cursorSlider, 1);
+    controls->addWidget(cursorText);
     controls->addWidget(volumeSlider);
     controls->addWidget(settingsButton);
 
@@ -641,7 +655,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
             auto* item = tracks->currentItem();
 
             play(
-                curAlbum,
+                selAlbum,
                 item->data(Qt::UserRole).toInt()
             );
         }
@@ -657,6 +671,8 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                 curAlbum,
                 curTrack - 1
             );
+
+            tracks->setCurrentRow(visibleRowForTrackIndex(curTrack));
         }
     );
 
@@ -686,6 +702,8 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                     curAlbum,
                     curTrack + 1
                 );
+
+                tracks->setCurrentRow(visibleRowForTrackIndex(curTrack));
             }
         }
     );
@@ -793,10 +811,18 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                     return;
                 }
 
-                if (audio.length() > 0
-                    && !cursorSlider->isSliderDown())
+                if (audio.length() > 0)
                 {
-                    cursorSlider->setValue(int(audio.cursor() / audio.length() * cursorSlider->maximum()));
+                    cursorText->setText(audio.formattedCursor() + " / " + audio.formattedLength());
+
+                    if (!cursorSlider->isSliderDown())
+                    {
+                        cursorSlider->setValue(int(audio.cursor() / audio.length() * cursorSlider->maximum()));
+                    }
+                }
+                else
+                {
+                    cursorText->setText("");
                 }
             }
         }
@@ -816,22 +842,36 @@ MainWindow::MainWindow(Settings* s) : settings(s)
         &MainWindow::playSelected
     );
 
-    timer.start(10);
+    timer.start(16);
 }
 
 void MainWindow::updateControlsText()
 {
     if (settings->iconButtons)
     {
-        iconButtonsList[0]->setText("⏮");
-        iconButtonsList[1]->setText("⏯");
-        iconButtonsList[2]->setText("⏭");
+        const QSize iconSize(14, 14);
+
+        iconButtonsList[0]->setIcon(backwardIcon);
+        iconButtonsList[1]->setIcon(playPauseIcon);
+        iconButtonsList[2]->setIcon(forwardIcon);
+
+        iconButtonsList[0]->setIconSize(iconSize);
+        iconButtonsList[1]->setIconSize(iconSize);
+        iconButtonsList[2]->setIconSize(iconSize);
+
+        iconButtonsList[0]->setText("");
+        iconButtonsList[1]->setText("");
+        iconButtonsList[2]->setText("");
     }
     else
     {
         iconButtonsList[0]->setText("backward");
         iconButtonsList[1]->setText("play / pause");
         iconButtonsList[2]->setText("forward");
+
+        iconButtonsList[0]->setIcon(QIcon());
+        iconButtonsList[1]->setIcon(QIcon());
+        iconButtonsList[2]->setIcon(QIcon());
     }
 }
 
@@ -881,7 +921,8 @@ void MainWindow::populateAlbums()
             const QString trackTitle = qs(t.title).toLower();
             const QString trackArtists = joinArtists(t.artists).toLower();
 
-            if (trackTitle.contains(q) || trackArtists.contains(q))
+            if (trackTitle.contains(q)
+                || trackArtists.contains(q))
             {
                 trackMatch = true;
 
@@ -981,6 +1022,12 @@ void MainWindow::play(int a, int t)
 
     audio.play(QString::fromUtf8(album.tracks[t].path.data(), int(album.tracks[t].path.size())));
 
+    const QString cursorTextLength = audio.formattedLength() + " / " + audio.formattedLength();
+
+    const int cursorTextWidth = cursorText->fontMetrics().horizontalAdvance(cursorTextLength);
+
+    cursorText->setMinimumWidth(cursorTextWidth);
+
     updateNowPlaying();
 
     if (!settings->lastfmSessionKey.isEmpty())
@@ -1055,9 +1102,19 @@ void MainWindow::openSettings()
                 roots.emplace_back(std::filesystem::path(f.toUtf8().constData()));
             }
 
+            const QString playingPath = currentPlayingPath();
+
             library.scan(roots);
 
             populateAlbums();
+
+            if (!rebindCurrentByPath(playingPath))
+            {
+                curAlbum = -1;
+                curTrack = -1;
+            }
+
+            updateNowPlaying();
         }
     );
 
@@ -1085,10 +1142,10 @@ void MainWindow::openSettings()
     settings->trackFormat = dlg.selectedTrackFormat();
     settings->iconButtons = dlg.selectedIconButtons();
 
-    if (settings->trackFormat.isEmpty())
-    {
-        settings->trackFormat = { "cover", "artist", "track" };
-    }
+    //if (settings->trackFormat.isEmpty())
+    //{
+    //    settings->trackFormat = { "cover", "artist", "track" };
+    //}
 
     settings->lastfmUsername = dlg.getlastfmUsername();
     settings->lastfmSessionKey = dlg.getlastfmSessionKey();
@@ -1107,9 +1164,19 @@ void MainWindow::openSettings()
             roots.emplace_back(std::filesystem::path(f.toUtf8().constData()));
         }
 
+        const QString playingPath = currentPlayingPath();
+
         library.scan(roots);
 
         populateAlbums();
+
+        if (!rebindCurrentByPath(playingPath))
+        {
+            curAlbum = -1;
+            curTrack = -1;
+        }
+
+        updateNowPlaying();
     }
 
     coverLabel->setFixedSize(settings->coverSize, settings->coverSize);
@@ -1258,4 +1325,53 @@ QString MainWindow::formatTrack(const Track& t) const
     }
 
     return parts.join(" - ");
+}
+
+QString MainWindow::currentPlayingPath() const
+{
+    if (curAlbum < 0 || curTrack < 0)
+    {
+        return {};
+    }
+
+    const auto& track = library.getAlbums()[curAlbum].tracks[curTrack];
+
+    return QString::fromUtf8(
+        track.path.data(),
+        int(track.path.size())
+    );
+}
+
+bool MainWindow::rebindCurrentByPath(const QString& path)
+{
+    if (path.isEmpty())
+    {
+        return false;
+    }
+
+    const auto& albums = library.getAlbums();
+
+    for (int ai = 0; ai < int(albums.size()); ++ai)
+    {
+        const auto& album = albums[ai];
+
+        for (int ti = 0; ti < int(album.tracks.size()); ++ti)
+        {
+            const auto& t = album.tracks[ti];
+            const QString p = QString::fromUtf8(
+                t.path.data(),
+                int(t.path.size())
+            );
+
+            if (p == path)
+            {
+                curAlbum = ai;
+                curTrack = ti;
+
+                return true;
+            }
+        }
+    }
+
+    return false;
 }

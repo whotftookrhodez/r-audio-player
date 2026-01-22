@@ -10,7 +10,7 @@ struct Settings
     float volume = 1.0f;
     int coverSize = 70;
     QStringList trackFormat = { "cover", "artist", "track" };
-    bool iconButtons = false;
+    bool iconButtons = true;
     QString lastfmUsername;
     QString lastfmSessionKey;
 
