@@ -100,7 +100,7 @@ FolderDialog::FolderDialog(const QStringList& existingFolders, QWidget* parent) 
         {
             background-color: #1a1a1a;
             color: #e6e6e6;
-            border: 1px solid #333333;
+            border: none;
             outline: none;
             alternate-background-color: #1a1a1a;
             show-drop-indicator: 0;
