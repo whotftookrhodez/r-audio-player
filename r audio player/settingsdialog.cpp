@@ -355,7 +355,6 @@ void SettingsDialog::removeSelectedFolder()
     }
 }
 
-
 QStringList SettingsDialog::selectedFolders() const
 {
     QStringList result;

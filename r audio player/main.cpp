@@ -11,6 +11,11 @@
 #include "settings.h"
 #include "mainwindow.h"
 
+// silence intellisense
+#ifndef APP_NAME
+#define APP_NAME "r audio player"
+#endif
+
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);

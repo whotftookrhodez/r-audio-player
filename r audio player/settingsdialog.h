@@ -35,6 +35,8 @@ public:
     QStringList selectedTrackFormat() const;
 Q_SIGNALS:
     void lastfmLoggedIn(const QString& sessionKey, const QString& username);
+
+    // safe to ignore
     void rescanRequested();
 private Q_SLOTS:
     void addFolder();
