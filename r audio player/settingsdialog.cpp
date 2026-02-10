@@ -33,12 +33,18 @@ bool SettingsDialog::selectedIconButtons() const
     return iconButtonsCheck->isChecked();
 }
 
+bool SettingsDialog::selectedTrackNumbers() const
+{
+    return trackNumbersCheck->isChecked();
+}
+
 SettingsDialog::SettingsDialog(
     const QStringList& musicFolders,
     bool /* autoplay */,
     int coverSize,
     const QStringList& trackFormat,
     bool iconButtons,
+    bool trackNumbers,
     const QString& lastfmUsername,
     const QString& lastfmSessionKey,
     QWidget* parent)
@@ -133,6 +139,9 @@ SettingsDialog::SettingsDialog(
     iconButtonsCheck = new QCheckBox("icon buttons", this);
     iconButtonsCheck->setChecked(iconButtons);
 
+    trackNumbersCheck = new QCheckBox("track number", this);
+    trackNumbersCheck->setChecked(trackNumbers);
+
     auto formatLayout = new QHBoxLayout;
     //formatLayout->addStretch();
     formatLayout->addWidget(coverSizeSpin);
@@ -142,10 +151,11 @@ SettingsDialog::SettingsDialog(
     formatLayout->addWidget(trackCheck);
     //formatLayout->addStretch();
 
-    auto iconButtonsLayout = new QHBoxLayout;
-    iconButtonsLayout->addStretch();
-    iconButtonsLayout->addWidget(iconButtonsCheck);
-    iconButtonsLayout->addStretch();
+    auto controlsLayout = new QHBoxLayout;
+    //controlsLayout->addStretch();
+    controlsLayout->addWidget(iconButtonsCheck);
+    controlsLayout->addWidget(trackNumbersCheck);
+    //controlsLayout->addStretch();
 
     auto credentialsLayout = new QVBoxLayout;
     lastfmUsernameEdit = new QLineEdit(this);
@@ -323,7 +333,7 @@ SettingsDialog::SettingsDialog(
     layout->addLayout(formatLayout);
     layout->addSpacing(6);
     layout->addWidget(new QLabel("controls:", this));
-    layout->addLayout(iconButtonsLayout);
+    layout->addLayout(controlsLayout);
     layout->addSpacing(6);
     layout->addLayout(credentialsLayout);
     layout->addStretch();

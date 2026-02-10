@@ -44,6 +44,8 @@ bool AudioPlayer::play(const QString& path)
 
     stop();
 
+    finishedFlag.store(false, std::memory_order_release);
+
 #ifdef _WIN32
     if (ma_sound_init_from_file_w(
         &engine,
@@ -70,11 +72,32 @@ bool AudioPlayer::play(const QString& path)
     }
 #endif
 
+    ma_sound_set_end_callback(
+        &sound,
+        &AudioPlayer::soundFinishedCallback,
+        this
+    );
+
     ma_sound_start(&sound);
 
     soundInit = true;
 
     return true;
+}
+
+void AudioPlayer::soundFinishedCallback(void* userData, ma_sound* /* sound */)
+{
+    auto* self = static_cast<AudioPlayer*>(userData);
+
+    if (self)
+    {
+        self->onSoundFinished();
+    }
+}
+
+void AudioPlayer::onSoundFinished()
+{
+    finishedFlag.store(true, std::memory_order_release);
 }
 
 void AudioPlayer::stop()
@@ -85,6 +108,8 @@ void AudioPlayer::stop()
         ma_sound_uninit(&sound);
 
         soundInit = false;
+
+        finishedFlag.store(false, std::memory_order_release);
     }
 }
 
@@ -140,6 +165,8 @@ void AudioPlayer::seek(double seconds)
             &sound,
             static_cast<ma_uint64>(seconds * sampleRate)
         );
+
+        finishedFlag.store(false, std::memory_order_release);
     }
 }
 
@@ -188,27 +215,9 @@ bool AudioPlayer::playing() const
         && ma_sound_is_playing(&sound);
 }
 
-bool AudioPlayer::finished() const
+bool AudioPlayer::finished()
 {
-    if (!soundInit)
-    {
-        return false;
-    }
-
-    ma_uint64 totalFrames = 0;
-    ma_uint64 currentFrame = 0;
-
-    ma_sound_get_length_in_pcm_frames(
-        &sound,
-        &totalFrames
-    );
-
-    ma_sound_get_cursor_in_pcm_frames(
-        &sound,
-        &currentFrame
-    );
-
-    return currentFrame >= totalFrames;
+    return finishedFlag.exchange(false, std::memory_order_acquire);
 }
 
 QString AudioPlayer::formattedCursor() const

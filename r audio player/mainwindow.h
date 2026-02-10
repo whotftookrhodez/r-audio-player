@@ -50,6 +50,7 @@ private:
     QNetworkAccessManager* nam = nullptr;
     QString currentPlayingPath() const;
 
+    int viewedAlbumIndex() const;
     int visibleRowForTrackIndex(int trackIndex) const;
     int selAlbum = -1;
     int selTrack = -1;

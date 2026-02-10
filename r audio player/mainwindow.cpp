@@ -37,6 +37,16 @@ static QString qs(const std::wstring& w)
     return QString::fromStdWString(w);
 }
 
+int MainWindow::viewedAlbumIndex() const
+{
+    if (auto* ai = albums->currentItem())
+    {
+        return ai->data(Qt::UserRole).toInt();
+    }
+
+    return -1;
+}
+
 int MainWindow::visibleRowForTrackIndex(int trackIndex) const
 {
     for (int i = 0; i < int(searchTrackOrder.size()); ++i)
@@ -517,8 +527,9 @@ MainWindow::MainWindow(Settings* s) : settings(s)
     lists->addWidget(tracks, 2);
 
     coverLabel = new QLabel(this);
-    coverLabel->setFixedSize(settings->coverSize, settings->coverSize);
-    coverLabel->setScaledContents(true);
+    coverLabel->setFixedHeight(settings->coverSize);
+    coverLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    coverLabel->setScaledContents(false);
     coverLabel->hide();
 
     nowPlaying = new QLabel("nothing playing", this);
@@ -672,7 +683,10 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                 curTrack - 1
             );
 
-            tracks->setCurrentRow(visibleRowForTrackIndex(curTrack));
+            if (viewedAlbumIndex() == curAlbum)
+            {
+                tracks->setCurrentRow(visibleRowForTrackIndex(curTrack));
+            }
         }
     );
 
@@ -703,7 +717,10 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                     curTrack + 1
                 );
 
-                tracks->setCurrentRow(visibleRowForTrackIndex(curTrack));
+                if (viewedAlbumIndex() == curAlbum)
+                {
+                    tracks->setCurrentRow(visibleRowForTrackIndex(curTrack));
+                }
             }
         }
     );
@@ -785,6 +802,31 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                 {
                     if (settings->autoplay)
                     {
+                        const int viewedAlbum = viewedAlbumIndex();
+
+                        if (viewedAlbum != curAlbum)
+                        {
+                            const auto& album = library.getAlbums()[curAlbum];
+
+                            const int nt = curTrack + 1;
+
+                            if (nt < int(album.tracks.size()))
+                            {
+                                play(curAlbum, nt);
+                            }
+                            else
+                            {
+                                audio.stop();
+
+                                curAlbum = -1;
+                                curTrack = -1;
+
+                                updateNowPlaying();
+                            }
+
+                            return;
+                        }
+
                         const int row = visibleRowForTrackIndex(curTrack);
 
                         if (row >= 0
@@ -842,7 +884,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
         &MainWindow::playSelected
     );
 
-    timer.start(16);
+    timer.start(10);
 }
 
 void MainWindow::updateControlsText()
@@ -947,9 +989,6 @@ void MainWindow::populateAlbums()
 
 void MainWindow::populateTracks(int albumIndex)
 {
-    curTrack = -1;
-    curAlbum = albumIndex;
-
     tracks->clear();
 
     searchTrackOrder.clear();
@@ -968,6 +1007,20 @@ void MainWindow::populateTracks(int albumIndex)
         QString displayText = album.variousArtists
             ? artistText + " - " + qs(t.title)
             : qs(t.title);
+
+        if (settings->trackNumbers)
+        {
+            const int digits = QString::number(int(album.tracks.size())).size();
+
+            const QString num = QString("%1").arg(
+                i + 1,
+                digits,
+                10,
+                QChar('0')
+            );
+
+            displayText = num + " - " + displayText;
+        }
 
         const QString matchText = (qs(t.title) + " " + joinArtists(t.artists)).toLower();
 
@@ -1078,12 +1131,62 @@ void MainWindow::playSelected()
 
 void MainWindow::openSettings()
 {
+    auto refreshUi =
+        [&]()
+        {
+            const QString playingPath = currentPlayingPath();
+
+            if (!playingPath.isEmpty())
+            {
+                rebindCurrentByPath(playingPath);
+            }
+
+            int a = curAlbum;
+
+            if (a < 0)
+            {
+                a = selAlbum;
+            }
+
+            if (a >= 0)
+            {
+                for (int i = 0; i < albums->count(); ++i)
+                {
+                    if (albums->item(i)->data(Qt::UserRole).toInt() == a)
+                    {
+                        albums->setCurrentRow(i);
+
+                        selAlbum = a;
+
+                        break;
+                    }
+                }
+
+                populateTracks(a);
+
+                if (curTrack >= 0)
+                {
+                    const int row = visibleRowForTrackIndex(curTrack);
+
+                    if (row >= 0)
+                    {
+                        tracks->setCurrentRow(row);
+
+                        selTrack = row;
+                    }
+                }
+            }
+
+            updateNowPlaying();
+        };
+
     SettingsDialog dlg(
         settings->folders,
         settings->autoplay,
         settings->coverSize,
         settings->trackFormat,
         settings->iconButtons,
+        settings->trackNumbers,
         settings->lastfmUsername,
         settings->lastfmSessionKey,
         this
@@ -1141,6 +1244,7 @@ void MainWindow::openSettings()
     settings->coverSize = dlg.selectedCoverSize();
     settings->trackFormat = dlg.selectedTrackFormat();
     settings->iconButtons = dlg.selectedIconButtons();
+    settings->trackNumbers = dlg.selectedTrackNumbers();
 
     //if (settings->trackFormat.isEmpty())
     //{
@@ -1175,13 +1279,11 @@ void MainWindow::openSettings()
             curAlbum = -1;
             curTrack = -1;
         }
-
-        updateNowPlaying();
     }
 
-    coverLabel->setFixedSize(settings->coverSize, settings->coverSize);
+    refreshUi();
 
-    updateNowPlaying();
+    coverLabel->setFixedHeight(settings->coverSize);
 }
 
 bool MainWindow::showCoverEnabled() const
@@ -1272,21 +1374,23 @@ void MainWindow::updateNowPlaying()
         return;
     }
 
-    coverLabel->setFixedSize(settings->coverSize, settings->coverSize); // not needed, but nice to have
-
     QPixmap cover;
 
     cover = loadEmbeddedCover(trackPath);
 
     if (!cover.isNull())
     {
-        coverLabel->setPixmap(
-            cover.scaled(
-                coverLabel->size(),
-                Qt::KeepAspectRatio,
-                Qt::SmoothTransformation
-            )
+        const int h = settings->coverSize;
+
+        const QPixmap scaled = cover.scaledToHeight(
+            h,
+            Qt::SmoothTransformation
         );
+
+        coverLabel->setFixedWidth(scaled.width());
+        coverLabel->setFixedHeight(h);
+
+        coverLabel->setPixmap(scaled);
 
         coverLabel->show();
     }

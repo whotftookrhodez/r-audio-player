@@ -4,6 +4,8 @@
 
 #include "miniaudio.h"
 
+#include <atomic>
+
 class AudioPlayer
 {
 public:
@@ -24,7 +26,7 @@ public:
 
     bool _soundInit() const;
     bool playing() const;
-    bool finished() const;
+    bool finished();
 
     QString formattedCursor() const;
     QString formattedLength() const;
@@ -34,4 +36,13 @@ private:
 
     ma_engine engine{};
     ma_sound sound{};
+
+    std::atomic<bool> finishedFlag{ false };
+
+    static void soundFinishedCallback(
+        void* userData,
+        ma_sound* sound
+    );
+
+    void onSoundFinished();
 };
