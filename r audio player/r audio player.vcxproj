@@ -132,6 +132,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="audioplayer.h" />
+    <ClInclude Include="clicklabel.h" />
     <ClInclude Include="clickslider.h" />
     <ClInclude Include="folderdialog.h" />
     <ClInclude Include="library.h" />

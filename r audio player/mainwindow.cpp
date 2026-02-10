@@ -4,12 +4,15 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
 #include <QPixmap>
 #include <QPushButton>
+#include <QScreen>
 #include <QShortcut>
+#include <QStorageInfo>
 #include <QStringList>
 #include <QVBoxLayout>
 
@@ -35,6 +38,188 @@ static QString qs(const std::string& s)
 static QString qs(const std::wstring& w)
 {
     return QString::fromStdWString(w);
+}
+
+static void showCoverFullscreen(const QPixmap& pix)
+{
+    if (pix.isNull())
+    {
+        return;
+    }
+
+    auto* dlg = new QDialog(nullptr, Qt::FramelessWindowHint | Qt::Window);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    
+    QPoint cursorPos = QCursor::pos();
+    QScreen* screen = QGuiApplication::screenAt(cursorPos);
+
+    if (!screen)
+    {
+        screen = QGuiApplication::primaryScreen();
+    }
+
+    if (screen)
+    {
+        dlg->setGeometry(screen->availableGeometry());
+    }
+
+    auto* label = new QLabel(dlg);
+    label->setAlignment(Qt::AlignCenter);
+
+    auto* layout = new QVBoxLayout(dlg);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(label);
+
+    struct Filter final : QObject
+    {
+        QPixmap pix;
+        QLabel* label = nullptr;
+        QDialog* dlg = nullptr;
+
+        void rescale()
+        {
+            if (!label
+                || pix.isNull())
+            {
+                return;
+            }
+
+            const QSize s = label->size();
+
+            if (s.isEmpty())
+            {
+                return;
+            }
+
+            label->setPixmap(
+                pix.scaled(
+                    s,
+                    Qt::KeepAspectRatio,
+                    Qt::SmoothTransformation
+                )
+            );
+        }
+
+        bool eventFilter(QObject* obj, QEvent* e) override
+        {
+            switch (e->type())
+            {
+            case QEvent::Show:
+            case QEvent::Resize:
+            case QEvent::WindowStateChange:
+                rescale();
+
+                break;
+            case QEvent::MouseButtonPress:
+                if (dlg)
+                {
+                    dlg->close();
+                }
+
+                return true;
+            case QEvent::KeyPress:
+            {
+                auto* ke = static_cast<QKeyEvent*>(e);
+
+                if (ke->key() == Qt::Key_Escape
+                    && dlg)
+                {
+                    dlg->close();
+
+                    return true;
+                }
+
+                break;
+            }
+
+            default:
+                break;
+            }
+
+            return QObject::eventFilter(
+                obj,
+                e
+            );
+        }
+    };
+
+    auto* f = new Filter;
+    f->pix = pix;
+    f->label = label;
+    f->dlg = dlg;
+
+    f->setParent(dlg);
+
+    label->installEventFilter(f);
+    dlg->installEventFilter(f);
+
+    dlg->show();
+
+    f->rescale();
+}
+
+static QSet<QString> getMountedRootSet()
+{
+    QSet<QString> roots;
+
+    const auto volumes = QStorageInfo::mountedVolumes();
+
+    for (const QStorageInfo& v : volumes)
+    {
+        if (!v.isValid()
+            || !v.isReady())
+        {
+            continue;
+        }
+
+        const QString root = QDir::cleanPath(v.rootPath());
+
+        if (root.isEmpty())
+        {
+            continue;
+        }
+
+        roots.insert(root);
+    }
+
+    return roots;
+}
+
+static QString mountRootForPath(const QString& p)
+{
+    const QString clean = QDir::cleanPath(p);
+
+    QStorageInfo si(clean);
+
+    if (si.isValid()
+        && !si.rootPath().isEmpty())
+    {
+        return QDir::cleanPath(si.rootPath());
+    }
+
+    // proprietary ugliness
+#ifdef _WIN32
+    if (clean.size() >= 2
+        && clean[1] == QChar(':'))
+    {
+        QString driveRoot;
+
+        driveRoot += clean[0];
+        driveRoot += ":/";
+
+        QStorageInfo si2(driveRoot);
+
+        if (si2.isValid()
+            && !si2.rootPath().isEmpty())
+        {
+            return QDir::cleanPath(si2.rootPath());
+        }
+
+        return QDir::cleanPath(driveRoot);
+    }
+#endif
+
+    return {};
 }
 
 int MainWindow::viewedAlbumIndex() const
@@ -511,7 +696,11 @@ MainWindow::MainWindow(Settings* s) : settings(s)
         roots.emplace_back(std::filesystem::path(f.toUtf8().constData()));
     }
 
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
     library.scan(roots);
+
+    QApplication::restoreOverrideCursor();
 
     search = new QLineEdit(this);
     search->setPlaceholderText("search");
@@ -526,7 +715,8 @@ MainWindow::MainWindow(Settings* s) : settings(s)
     lists->addWidget(albums, 1);
     lists->addWidget(tracks, 2);
 
-    coverLabel = new QLabel(this);
+    coverLabel = new ClickLabel(this);
+    coverLabel->setCursor(Qt::PointingHandCursor);
     coverLabel->setFixedHeight(settings->coverSize);
     coverLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     coverLabel->setScaledContents(false);
@@ -669,6 +859,21 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                 selAlbum,
                 item->data(Qt::UserRole).toInt()
             );
+        }
+    );
+
+    connect(
+        coverLabel,
+        &ClickLabel::clicked,
+        this,
+        [this]
+        {
+            if (currentCover.isNull())
+            {
+                return;
+            }
+
+            showCoverFullscreen(currentCover);
         }
     );
 
@@ -883,6 +1088,8 @@ MainWindow::MainWindow(Settings* s) : settings(s)
         this,
         &MainWindow::playSelected
     );
+
+    initDriveWatcher();
 
     timer.start(10);
 }
@@ -1207,7 +1414,11 @@ void MainWindow::openSettings()
 
             const QString playingPath = currentPlayingPath();
 
+            QApplication::setOverrideCursor(Qt::WaitCursor);
+
             library.scan(roots);
+
+            QApplication::restoreOverrideCursor();
 
             populateAlbums();
 
@@ -1282,7 +1493,11 @@ void MainWindow::openSettings()
 
         const QString playingPath = currentPlayingPath();
 
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+
         library.scan(roots);
+
+        QApplication::restoreOverrideCursor();
 
         populateAlbums();
 
@@ -1386,9 +1601,9 @@ void MainWindow::updateNowPlaying()
         return;
     }
 
-    QPixmap cover;
+    QPixmap cover = loadEmbeddedCover(trackPath);
 
-    cover = loadEmbeddedCover(trackPath);
+    currentCover = cover;
 
     if (!cover.isNull())
     {
@@ -1490,4 +1705,123 @@ bool MainWindow::rebindCurrentByPath(const QString& path)
     }
 
     return false;
+}
+
+void MainWindow::initDriveWatcher()
+{
+    lastMountedRoots = getMountedRootSet();
+
+    drivePollTimer.setInterval(1000);
+
+    connect(
+        &drivePollTimer,
+        &QTimer::timeout,
+        this,
+        &MainWindow::checkMountedVolumes
+    );
+
+    drivePollTimer.start();
+
+    rescanDebounceTimer.setInterval(1000);
+    rescanDebounceTimer.setSingleShot(true);
+
+    connect(
+        &rescanDebounceTimer,
+        &QTimer::timeout,
+        this,
+        [&]()
+        {
+            std::vector<std::filesystem::path> roots;
+
+            for (const auto& f : settings->folders)
+            {
+                roots.emplace_back(std::filesystem::path(f.toUtf8().constData()));
+            }
+
+            const QString playingPath = currentPlayingPath();
+
+            QApplication::setOverrideCursor(Qt::WaitCursor);
+
+            library.scan(roots);
+
+            QApplication::restoreOverrideCursor();
+
+            populateAlbums();
+
+            if (!rebindCurrentByPath(playingPath))
+            {
+                curAlbum = -1;
+                curTrack = -1;
+            }
+
+            updateNowPlaying();
+        }
+    );
+}
+
+void MainWindow::checkMountedVolumes()
+{
+    const QSet<QString> now = getMountedRootSet();
+
+    if (now == lastMountedRoots)
+    {
+        return;
+    }
+
+    QSet<QString> added = now;
+    QSet<QString> removed = lastMountedRoots;
+
+    added.subtract(lastMountedRoots);
+    removed.subtract(now);
+
+    lastMountedRoots = now;
+
+    const QSet<QString> used = getLibraryMountRoots();
+
+    bool affectsLibrary = false;
+
+    for (const QString& a : added)
+    {
+        if (used.contains(a))
+        {
+            affectsLibrary = true;
+
+            break;
+        }
+    }
+
+    if (!affectsLibrary)
+    {
+        for (const QString& r : removed)
+        {
+            if (used.contains(r))
+            {
+                affectsLibrary = true;
+
+                break;
+            }
+        }
+    }
+
+    if (affectsLibrary)
+    {
+        rescanDebounceTimer.start();
+    }
+}
+
+QSet<QString> MainWindow::getLibraryMountRoots() const
+{
+    QSet<QString> used;
+
+    for (const auto& f : settings->folders)
+    {
+        const QString r = mountRootForPath(f);
+
+        if (!r.isEmpty())
+        {
+            used.insert(r);
+        }
+    }
+
+    return used;
 }

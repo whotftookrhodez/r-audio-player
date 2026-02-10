@@ -37,6 +37,7 @@ add_executable(r_audio_player
     main.cpp
     audioplayer.h
     audioplayer.cpp
+    clicklabel.h
     clickslider.h
     folderdialog.h
     folderdialog.cpp

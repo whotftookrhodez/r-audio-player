@@ -7,7 +7,9 @@
 #include <QCheckBox>
 #include <QPushButton>
 #include <QTimer>
+#include <QSet>
 #include <QSlider>
+#include <QString>
 
 #include <QDateTime> // for nam
 #include <QNetworkAccessManager>
@@ -15,6 +17,7 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 
+#include "clicklabel.h"
 #include "settings.h"
 #include "library.h"
 #include "audioplayer.h"
@@ -36,7 +39,8 @@ private:
     QListWidget* albums = nullptr;
     QString formatTrack(const Track& t) const;
     QListWidget* tracks = nullptr;
-    QLabel* coverLabel = nullptr;
+    QPixmap currentCover;
+    ClickLabel* coverLabel = nullptr;
     QLabel* nowPlaying = nullptr;
     QVector<QPushButton*> iconButtonsList;
     QIcon backwardIcon;
@@ -49,6 +53,10 @@ private:
     QSlider* volumeSlider = nullptr;
     QNetworkAccessManager* nam = nullptr;
     QString currentPlayingPath() const;
+    QTimer drivePollTimer;
+    QTimer rescanDebounceTimer;
+    QSet<QString> lastMountedRoots;
+    QSet<QString> getLibraryMountRoots() const;
 
     int viewedAlbumIndex() const;
     int visibleRowForTrackIndex(int trackIndex) const;
@@ -67,6 +75,8 @@ private:
     void playSelected();
     void openSettings();
     void updateNowPlaying();
+    void initDriveWatcher();
+    void checkMountedVolumes();
 
     double scrobbleThreshold = 0.9;
 
