@@ -121,7 +121,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>C:\Users\PC\vcpkg\installed\x64-windows-static\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Qt\6.10.1\msvc2022_64\include\QtNetwork;C:\Qt\6.10.1\msvc2022_64\include\QtWidgets;C:\Qt\6.10.1\msvc2022_64\include\QtGui;C:\Qt\6.10.1\msvc2022_64\include\QtCore;C:\Qt\6.10.1\msvc2022_64\include;C:\Users\PC\vcpkg\installed\x64-windows-static\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -160,6 +160,8 @@
     <None Include="forward.svg" />
     <None Include="playpause.svg" />
     <None Include="resources.qrc" />
+    <None Include="r_audio_player.desktop" />
+    <None Include="r_audio_player.desktop.in" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="r audio player.ico" />

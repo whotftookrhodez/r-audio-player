@@ -171,8 +171,15 @@ SettingsDialog::SettingsDialog(
     credentialsLayout->addWidget(lastfmPasswordEdit);
 
     auto loginBtn = new QPushButton("log in", this);
+    auto logoutBtn = new QPushButton("log out", this);
+
+    auto lastfmBtns = new QHBoxLayout;
+    lastfmBtns->addWidget(loginBtn);
+    lastfmBtns->addWidget(logoutBtn);
+
     loginBtn->setEnabled(false);
-    credentialsLayout->addWidget(loginBtn);
+    logoutBtn->setEnabled(!lastfmSessionKey.isEmpty());
+    credentialsLayout->addLayout(lastfmBtns);
 
     auto checkFields = [this, loginBtn]()
         {
@@ -202,7 +209,7 @@ SettingsDialog::SettingsDialog(
         loginBtn,
         &QPushButton::clicked,
         this,
-        [this, nam]()
+        [this, nam, loginBtn, logoutBtn]()
         {
             const QString username = lastfmUsernameEdit->text();
             const QString password = lastfmPasswordEdit->text();
@@ -259,7 +266,7 @@ SettingsDialog::SettingsDialog(
                 reply,
                 &QNetworkReply::finished,
                 this,
-                [this, reply]()
+                [this, reply, loginBtn, logoutBtn]()
                 {
                     reply->deleteLater();
 
@@ -300,8 +307,27 @@ SettingsDialog::SettingsDialog(
                         "last.fm",
                         "logged in"
                     );
+
+                    logoutBtn->setEnabled(true);
                 }
             );
+        }
+    );
+
+    connect(
+        logoutBtn,
+        &QPushButton::clicked,
+        this,
+        [this, loginBtn, logoutBtn]()
+        {
+            this->lastfmSessionKey.clear();
+
+            lastfmUsernameEdit->clear();
+            lastfmPasswordEdit->clear();
+
+            logoutBtn->setEnabled(false);
+
+            Q_EMIT lastfmLoggedOut();
         }
     );
 

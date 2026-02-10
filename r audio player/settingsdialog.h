@@ -37,6 +37,7 @@ public:
     QStringList selectedTrackFormat() const;
 Q_SIGNALS:
     void lastfmLoggedIn(const QString& sessionKey, const QString& username);
+    void lastfmLoggedOut();
 
     // safe to ignore
     void rescanRequested();

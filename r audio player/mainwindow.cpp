@@ -1233,6 +1233,18 @@ void MainWindow::openSettings()
         }
     );
 
+    connect(
+        &dlg,
+        &SettingsDialog::lastfmLoggedOut,
+        this,
+        [this]
+        {
+            settings->lastfmSessionKey.clear();
+            settings->lastfmUsername.clear();
+            settings->save();
+        }
+    );
+
     if (dlg.exec() != QDialog::Accepted)
     {
         return;

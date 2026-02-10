@@ -84,15 +84,21 @@
     <None Include="resources.qrc">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="r_audio_player.desktop">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="r_audio_player.desktop.in">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="r_audio_player.png">
+      <Filter>Resource Files</Filter>
+    </Image>
     <Image Include="r audio player.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="small.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="r_audio_player.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
