@@ -149,12 +149,12 @@ SettingsDialog::SettingsDialog(
     trackCheck->setChecked(trackFormat.contains("track"));
 
     backgroundImageEdit = new QLineEdit(this);
-    backgroundImageEdit->setPlaceholderText("background image path");
-#if defined(Q_OS_WIN)
+    backgroundImageEdit->setPlaceholderText("background image/gif path");
+#if defined(_WIN32)
     backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("C:/Users/User/Pictures/picture.png")); // same length slashes, less work
-#elif defined(Q_OS_MACOS)
+#elif defined(__APPLE__)
     backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("/Users/username/Pictures"));
-#elif defined(Q_OS_LINUX)
+#elif defined(__linux__)
     backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("/home/username/Pictures/picture.png"));
 #endif
     backgroundImageEdit->setText(backgroundImagePath);

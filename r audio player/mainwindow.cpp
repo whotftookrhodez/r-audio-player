@@ -2,12 +2,16 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QEvent>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
+#include <QMovie>
+#include <QPainter>
+#include <QPaintEvent>
 #include <QPixmap>
 #include <QPushButton>
 #include <QScreen>
@@ -29,6 +33,134 @@
 #include "folderdialog.h"
 #include "mainwindow.h"
 #include "settingsdialog.h"
+
+namespace
+{
+    struct GifBackgroundFilter final : QObject
+    {
+        QWidget* host = nullptr;
+        QMovie movie;
+
+        explicit GifBackgroundFilter(QWidget* h, const QString& path)
+            :
+            QObject(h),
+            host(h),
+            movie(path)
+        {
+            setObjectName("__gif_bg_filter");
+
+            movie.start();
+
+            QObject::connect(
+                &movie,
+                &QMovie::frameChanged,
+                this,
+                [this]
+                {
+                    if (host)
+                    {
+                        host->update();
+                    }
+                }
+            );
+        }
+
+        bool eventFilter(QObject* obj, QEvent* e) override
+        {
+            if (!host
+                || obj != host)
+            {
+                return QObject::eventFilter(
+                    obj,
+                    e
+                );
+            }
+
+            switch (e->type())
+            {
+            case QEvent::Paint:
+            {
+                if (!movie.isValid())
+                {
+                    break;
+                }
+
+                auto* pe = static_cast<QPaintEvent*>(e);
+
+                QPainter p(host);
+                p.setClipRegion(pe->region());
+
+                const QPixmap frame = movie.currentPixmap();
+
+                if (!frame.isNull())
+                {
+                    const QSize target = host->size();
+
+                    const QPixmap scaled = frame.scaled(
+                        target,
+                        Qt::IgnoreAspectRatio,
+                        Qt::SmoothTransformation
+                    );
+
+                    p.drawPixmap(
+                        0,
+                        0,
+                        scaled
+                    );
+                }
+
+                break;
+            }
+
+            default:
+                break;
+            }
+
+            return QObject::eventFilter(
+                obj,
+                e
+            );
+        }
+    };
+
+    static void updateAnimatedBackground(QWidget* host, const QString& path)
+    {
+        const QObjectList children = host->children();
+
+        for (QObject* o : children)
+        {
+            if (!o)
+            {
+                continue;
+            }
+
+            if (o->objectName() == "__gif_bg_filter")
+            {
+                auto* f = static_cast<GifBackgroundFilter*>(o);
+
+                host->removeEventFilter(f);
+
+                f->deleteLater();
+            }
+        }
+
+        if (path.isEmpty()
+            || !QFileInfo::exists(path))
+        {
+            host->update();
+
+            return;
+        }
+
+        auto* filter = new GifBackgroundFilter(
+            host,
+            path
+        );
+
+        host->installEventFilter(filter);
+        host->update();
+    }
+}
 
 static QString qs(const std::string& s)
 {
@@ -1188,14 +1320,38 @@ void MainWindow::updateBackground()
     {
         setStyleSheet(""); // return to default stylesheet
 
+        updateAnimatedBackground(
+            this,
+            QString()
+        );
+
         return;
     }
 
-    QString fp = QFileInfo(p).absoluteFilePath();
+    const bool isGif = p.endsWith(".gif", Qt::CaseInsensitive);
 
-    fp.replace('\\', '/');
+    if (isGif)
+    {
+        setStyleSheet("");
 
-    setStyleSheet("#mw { border-image: url(\"" + fp + "\") 0 0 0 0 stretch stretch; }");
+        updateAnimatedBackground(
+            this,
+            p
+        );
+    }
+    else
+    {
+        updateAnimatedBackground(
+            this,
+            QString()
+        );
+
+        QString fp = QFileInfo(p).absoluteFilePath();
+
+        fp.replace('\\', '/');
+
+        setStyleSheet("#mw { border-image: url(\"" + fp + "\") 0 0 0 0 stretch stretch; }");
+    }
 
     const QString customBackgroundStyleSheet = R"(
         #search,
