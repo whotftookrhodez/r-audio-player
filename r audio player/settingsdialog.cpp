@@ -28,6 +28,11 @@ int SettingsDialog::selectedCoverSize() const
     return coverSizeSpin->value();
 }
 
+QString SettingsDialog::selectedBackgroundImagePath() const
+{
+    return backgroundImageEdit->text().trimmed();
+}
+
 bool SettingsDialog::selectedIconButtons() const
 {
     return iconButtonsCheck->isChecked();
@@ -48,6 +53,7 @@ SettingsDialog::SettingsDialog(
     bool /* autoplay */,
     int coverSize,
     const QStringList& trackFormat,
+    const QString& backgroundImagePath,
     bool iconButtons,
     bool coverNewWindow,
     bool trackNumbers,
@@ -142,6 +148,17 @@ SettingsDialog::SettingsDialog(
     albumCheck->setChecked(trackFormat.contains("album"));
     trackCheck->setChecked(trackFormat.contains("track"));
 
+    backgroundImageEdit = new QLineEdit(this);
+    backgroundImageEdit->setPlaceholderText("background image path");
+#if defined(Q_OS_WIN)
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("C:/Users/User/Pictures/picture.png")); // same length slashes, less work
+#elif defined(Q_OS_MACOS)
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("/Users/username/Pictures"));
+#elif defined(Q_OS_LINUX)
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("/home/username/Pictures/picture.png"));
+#endif
+    backgroundImageEdit->setText(backgroundImagePath);
+
     iconButtonsCheck = new QCheckBox("icon buttons", this);
     iconButtonsCheck->setChecked(iconButtons);
 
@@ -162,6 +179,7 @@ SettingsDialog::SettingsDialog(
 
     auto controlsLayout = new QHBoxLayout;
     //controlsLayout->addStretch();
+    controlsLayout->addWidget(backgroundImageEdit);
     controlsLayout->addWidget(iconButtonsCheck);
     controlsLayout->addWidget(coverNewWindowCheck);
     controlsLayout->addWidget(trackNumbersCheck);

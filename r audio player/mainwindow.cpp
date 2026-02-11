@@ -655,7 +655,14 @@ MainWindow::MainWindow(Settings* s) : settings(s)
         QScrollBar:vertical,
         QScrollBar:horizontal
         {
-            background-color: #1a1a1a;
+            background-color: transparent;
+            border: none;
+        }
+
+        QScrollBar::groove:vertical,
+        QScrollBar::groove:horizontal
+        {
+            background: transparent;
             border: none;
         }
 
@@ -697,6 +704,9 @@ MainWindow::MainWindow(Settings* s) : settings(s)
             outline: none;
         }
     )");
+
+    setObjectName("mw");
+    setAttribute(Qt::WA_StyledBackground, true);
 
     audio.init();
     audio.setVolume(settings->volume);
@@ -817,6 +827,21 @@ MainWindow::MainWindow(Settings* s) : settings(s)
     root->addWidget(nowPlayingContainer);
     root->addLayout(controls);
 
+    search->setObjectName("search");
+    albums->setObjectName("albums");
+    tracks->setObjectName("tracks");
+    nowPlaying->setObjectName("nowPlaying");
+    nowPlayingContainer->setObjectName("nowPlayingContainer");
+    backwardButton->setObjectName("backwardButton");
+    playPauseButton->setObjectName("playPauseButton");
+    forwardButton->setObjectName("forwardButton");
+    autoplay->setObjectName("autoplay");
+    cursorSlider->setObjectName("cursorSlider");
+    cursorText->setObjectName("cursorText");
+    volumeSlider->setObjectName("volumeSlider");
+    settingsButton->setObjectName("settingsButton");
+
+    updateBackground();
     populateAlbums();
 
     connect(
@@ -1154,6 +1179,62 @@ void MainWindow::updateControlsText()
     }
 }
 
+void MainWindow::updateBackground()
+{
+    const QString p = settings->backgroundImagePath;
+
+    if (p.isEmpty()
+        || !QFileInfo::exists(p))
+    {
+        setStyleSheet(""); // return to default stylesheet
+
+        return;
+    }
+
+    QString fp = QFileInfo(p).absoluteFilePath();
+
+    fp.replace('\\', '/');
+
+    setStyleSheet("#mw { border-image: url(\"" + fp + "\") 0 0 0 0 stretch stretch; }");
+
+    const QString customBackgroundStyleSheet = R"(
+        #search,
+        #albums,
+        #tracks,
+        #backwardButton,
+        #playPauseButton,
+        #forwardButton,
+        #settingsButton
+        {
+            background-color: rgba(26, 26, 26, 128);
+        }
+
+        #nowPlaying,
+        #nowPlayingContainer,
+        #autoplay,
+        #cursorSlider,
+        #cursorText,
+        #volumeSlider
+        {
+            background: transparent;
+        }
+
+        #backwardButton:hover,
+        #playPauseButton:hover,
+        #forwardButton:hover,
+        #settingsButton:hover,
+        #backwardButton:pressed,
+        #playPauseButton:pressed,
+        #forwardButton:pressed,
+        #settingsButton:pressed
+        {
+            background-color: #333333;
+        }
+    )";
+
+    qApp->setStyleSheet(qApp->styleSheet() + customBackgroundStyleSheet);
+}
+
 static QString joinArtists(const std::vector<std::string>& artists)
 {
     QStringList o;
@@ -1422,6 +1503,7 @@ void MainWindow::openSettings()
         settings->autoplay,
         settings->coverSize,
         settings->trackFormat,
+        settings->backgroundImagePath,
         settings->iconButtons,
         settings->coverNewWindow,
         settings->trackNumbers,
@@ -1497,6 +1579,7 @@ void MainWindow::openSettings()
     settings->folders = dlg.selectedFolders();
     settings->coverSize = dlg.selectedCoverSize();
     settings->trackFormat = dlg.selectedTrackFormat();
+    settings->backgroundImagePath = dlg.selectedBackgroundImagePath();
     settings->iconButtons = dlg.selectedIconButtons();
     settings->coverNewWindow = dlg.selectedCoverNewWindow();
     settings->trackNumbers = dlg.selectedTrackNumbers();
@@ -1510,6 +1593,7 @@ void MainWindow::openSettings()
     settings->lastfmSessionKey = dlg.getlastfmSessionKey();
     settings->save();
 
+    updateBackground();
     updateControlsText();
 
     autoplay->setChecked(settings->autoplay);

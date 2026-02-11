@@ -68,6 +68,7 @@ private:
     void lastfmUpdateNowPlaying(const Track& t);
     void lastfmScrobbleTrack(const Track& t);
     void updateControlsText();
+    void updateBackground();
     void populateAlbums();
     void populateTracks(int albumIndex);
     void playFirstOfAlbum(int albumIndex);

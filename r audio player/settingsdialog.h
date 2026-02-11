@@ -18,6 +18,7 @@ public:
         bool autoplay,
         int coverSize,
         const QStringList& trackFormat,
+        const QString& backgroundImagePath,
         bool iconButtons,
         bool coverNewWindow,
         bool trackNumbers,
@@ -30,6 +31,8 @@ public:
     QString getlastfmSessionKey() const { return lastfmSessionKey; }
 
     int selectedCoverSize() const;
+
+    QString selectedBackgroundImagePath() const;
 
     bool selectedIconButtons() const;
     bool selectedCoverNewWindow() const;
@@ -57,6 +60,7 @@ private:
     QCheckBox* artistCheck = nullptr;
     QCheckBox* albumCheck = nullptr;
     QCheckBox* trackCheck = nullptr;
+    QLineEdit* backgroundImageEdit = nullptr;
     QCheckBox* iconButtonsCheck = nullptr;
     QCheckBox* coverNewWindowCheck = nullptr;
     QCheckBox* trackNumbersCheck = nullptr;

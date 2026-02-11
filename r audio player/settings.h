@@ -10,6 +10,7 @@ struct Settings
     float volume = 1.0f;
     int coverSize = 70;
     QStringList trackFormat = { "cover", "artist", "track" };
+    QString backgroundImagePath;
     bool iconButtons = true;
     bool coverNewWindow = true;
     bool trackNumbers = true;
@@ -21,6 +22,7 @@ struct Settings
     static constexpr const char* K_VOLUME = "volume";
     static constexpr const char* K_COVERSIZE = "coverSize";
     static constexpr const char* K_TRACKFORMAT = "trackFormat";
+    static constexpr const char* K_BACKGROUNDIMAGEPATH = "backgroundImagePath";
     static constexpr const char* K_ICONBUTTONS = "iconButtons";
     static constexpr const char* K_COVERNEWWINDOW = "coverNewWindow";
     static constexpr const char* K_TRACKNUMBERS = "trackNumbers";
@@ -40,6 +42,7 @@ struct Settings
         volume = s.value(K_VOLUME, volume).toFloat();
         coverSize = s.value(K_COVERSIZE, coverSize).toInt();
         trackFormat = s.value(K_TRACKFORMAT, trackFormat).toStringList();
+        backgroundImagePath = s.value(K_BACKGROUNDIMAGEPATH, backgroundImagePath).toString();
         iconButtons = s.value(K_ICONBUTTONS, iconButtons).toBool();
         coverNewWindow = s.value(K_COVERNEWWINDOW, coverNewWindow).toBool();
         trackNumbers = s.value(K_TRACKNUMBERS, trackNumbers).toBool();
@@ -56,6 +59,7 @@ struct Settings
         s.setValue(K_VOLUME, volume);
         s.setValue(K_COVERSIZE, coverSize);
         s.setValue(K_TRACKFORMAT, trackFormat);
+        s.setValue(K_BACKGROUNDIMAGEPATH, backgroundImagePath);
         s.setValue(K_ICONBUTTONS, iconButtons);
         s.setValue(K_COVERNEWWINDOW, coverNewWindow);
         s.setValue(K_TRACKNUMBERS, trackNumbers);
