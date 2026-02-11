@@ -33,6 +33,11 @@ bool SettingsDialog::selectedIconButtons() const
     return iconButtonsCheck->isChecked();
 }
 
+bool SettingsDialog::selectedCoverNewWindow() const
+{
+    return coverNewWindowCheck->isChecked();
+}
+
 bool SettingsDialog::selectedTrackNumbers() const
 {
     return trackNumbersCheck->isChecked();
@@ -44,6 +49,7 @@ SettingsDialog::SettingsDialog(
     int coverSize,
     const QStringList& trackFormat,
     bool iconButtons,
+    bool coverNewWindow,
     bool trackNumbers,
     const QString& lastfmUsername,
     const QString& lastfmSessionKey,
@@ -139,6 +145,9 @@ SettingsDialog::SettingsDialog(
     iconButtonsCheck = new QCheckBox("icon buttons", this);
     iconButtonsCheck->setChecked(iconButtons);
 
+    coverNewWindowCheck = new QCheckBox("maximize cover to pip window", this);
+    coverNewWindowCheck->setChecked(coverNewWindow);
+
     trackNumbersCheck = new QCheckBox("track number", this);
     trackNumbersCheck->setChecked(trackNumbers);
 
@@ -154,6 +163,7 @@ SettingsDialog::SettingsDialog(
     auto controlsLayout = new QHBoxLayout;
     //controlsLayout->addStretch();
     controlsLayout->addWidget(iconButtonsCheck);
+    controlsLayout->addWidget(coverNewWindowCheck);
     controlsLayout->addWidget(trackNumbersCheck);
     //controlsLayout->addStretch();
 

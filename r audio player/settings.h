@@ -11,6 +11,7 @@ struct Settings
     int coverSize = 70;
     QStringList trackFormat = { "cover", "artist", "track" };
     bool iconButtons = true;
+    bool coverNewWindow = true;
     bool trackNumbers = true;
     QString lastfmUsername;
     QString lastfmSessionKey;
@@ -21,6 +22,7 @@ struct Settings
     static constexpr const char* K_COVERSIZE = "coverSize";
     static constexpr const char* K_TRACKFORMAT = "trackFormat";
     static constexpr const char* K_ICONBUTTONS = "iconButtons";
+    static constexpr const char* K_COVERNEWWINDOW = "coverNewWindow";
     static constexpr const char* K_TRACKNUMBERS = "trackNumbers";
     static constexpr const char* K_LASTFM_USERNAME = "lastfmUsername";
     static constexpr const char* K_LASTFM_SESSIONKEY = "lastfmSessionKey";
@@ -39,6 +41,7 @@ struct Settings
         coverSize = s.value(K_COVERSIZE, coverSize).toInt();
         trackFormat = s.value(K_TRACKFORMAT, trackFormat).toStringList();
         iconButtons = s.value(K_ICONBUTTONS, iconButtons).toBool();
+        coverNewWindow = s.value(K_COVERNEWWINDOW, coverNewWindow).toBool();
         trackNumbers = s.value(K_TRACKNUMBERS, trackNumbers).toBool();
         lastfmUsername = s.value(K_LASTFM_USERNAME, "").toString();
         lastfmSessionKey = s.value(K_LASTFM_SESSIONKEY, "").toString();
@@ -54,6 +57,7 @@ struct Settings
         s.setValue(K_COVERSIZE, coverSize);
         s.setValue(K_TRACKFORMAT, trackFormat);
         s.setValue(K_ICONBUTTONS, iconButtons);
+        s.setValue(K_COVERNEWWINDOW, coverNewWindow);
         s.setValue(K_TRACKNUMBERS, trackNumbers);
         s.setValue(K_LASTFM_USERNAME, lastfmUsername);
         s.setValue(K_LASTFM_SESSIONKEY, lastfmSessionKey);

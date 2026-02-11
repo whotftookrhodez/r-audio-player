@@ -19,6 +19,7 @@ public:
         int coverSize,
         const QStringList& trackFormat,
         bool iconButtons,
+        bool coverNewWindow,
         bool trackNumbers,
         const QString& lastfmUsername,
         const QString& lastfmSessionKey,
@@ -31,6 +32,7 @@ public:
     int selectedCoverSize() const;
 
     bool selectedIconButtons() const;
+    bool selectedCoverNewWindow() const;
     bool selectedTrackNumbers() const;
 
     QStringList selectedFolders() const;
@@ -56,6 +58,7 @@ private:
     QCheckBox* albumCheck = nullptr;
     QCheckBox* trackCheck = nullptr;
     QCheckBox* iconButtonsCheck = nullptr;
+    QCheckBox* coverNewWindowCheck = nullptr;
     QCheckBox* trackNumbersCheck = nullptr;
     QLineEdit* lastfmUsernameEdit = nullptr;
     QLineEdit* lastfmPasswordEdit = nullptr;

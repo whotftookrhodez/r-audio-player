@@ -40,31 +40,51 @@ static QString qs(const std::wstring& w)
     return QString::fromStdWString(w);
 }
 
-static void showCoverFullscreen(const QPixmap& pix)
+static void showCoverFullscreen(const QPixmap& pix, bool pip, const QString& title, const QWidget* centerOn)
 {
     if (pix.isNull())
     {
         return;
     }
 
-    auto* dlg = new QDialog(nullptr, Qt::FramelessWindowHint | Qt::Window);
+    auto* dlg = new QDialog(
+        nullptr,
+        pip
+        ? (Qt::WindowStaysOnTopHint | Qt::Window)
+        : (Qt::FramelessWindowHint | Qt::Window)
+    );
+
     dlg->setAttribute(Qt::WA_DeleteOnClose);
-    
-    QPoint cursorPos = QCursor::pos();
-    QScreen* screen = QGuiApplication::screenAt(cursorPos);
 
-    if (!screen)
+    if (pip)
     {
-        screen = QGuiApplication::primaryScreen();
+        dlg->resize(480, 480);
+        dlg->move(centerOn->frameGeometry().center() - dlg->rect().center());
+        dlg->setWindowTitle(title);
     }
-
-    if (screen)
+    else
     {
-        dlg->setGeometry(screen->availableGeometry());
+        QPoint cursorPos = QCursor::pos();
+        QScreen* screen = QGuiApplication::screenAt(cursorPos);
+
+        if (!screen)
+        {
+            screen = QGuiApplication::primaryScreen();
+        }
+
+        if (screen)
+        {
+            dlg->setGeometry(screen->availableGeometry());
+        }
     }
 
     auto* label = new QLabel(dlg);
     label->setAlignment(Qt::AlignCenter);
+
+    if (pip)
+    {
+        label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    }
 
     auto* layout = new QVBoxLayout(dlg);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -75,6 +95,8 @@ static void showCoverFullscreen(const QPixmap& pix)
         QPixmap pix;
         QLabel* label = nullptr;
         QDialog* dlg = nullptr;
+
+        bool pip;
 
         void rescale()
         {
@@ -111,12 +133,14 @@ static void showCoverFullscreen(const QPixmap& pix)
 
                 break;
             case QEvent::MouseButtonPress:
-                if (dlg)
+                if (!pip && dlg)
                 {
                     dlg->close();
+
+                    return true;
                 }
 
-                return true;
+                break;
             case QEvent::KeyPress:
             {
                 auto* ke = static_cast<QKeyEvent*>(e);
@@ -147,6 +171,7 @@ static void showCoverFullscreen(const QPixmap& pix)
     f->pix = pix;
     f->label = label;
     f->dlg = dlg;
+    f->pip = pip;
 
     f->setParent(dlg);
 
@@ -873,7 +898,12 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                 return;
             }
 
-            showCoverFullscreen(currentCover);
+            showCoverFullscreen(
+                currentCover,
+                settings->coverNewWindow,
+                nowPlaying->text(),
+                this
+            );
         }
     );
 
@@ -1393,6 +1423,7 @@ void MainWindow::openSettings()
         settings->coverSize,
         settings->trackFormat,
         settings->iconButtons,
+        settings->coverNewWindow,
         settings->trackNumbers,
         settings->lastfmUsername,
         settings->lastfmSessionKey,
@@ -1467,6 +1498,7 @@ void MainWindow::openSettings()
     settings->coverSize = dlg.selectedCoverSize();
     settings->trackFormat = dlg.selectedTrackFormat();
     settings->iconButtons = dlg.selectedIconButtons();
+    settings->coverNewWindow = dlg.selectedCoverNewWindow();
     settings->trackNumbers = dlg.selectedTrackNumbers();
 
     //if (settings->trackFormat.isEmpty())
