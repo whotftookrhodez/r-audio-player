@@ -1,3 +1,4 @@
+*.c linguist-detectable=false
 *.h linguist-language=C++ linguist-detectable=true
 *.qrc linguist-language=XML linguist-detectable=true
 *.rc linguist-language=C linguist-detectable=true
