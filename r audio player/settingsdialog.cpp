@@ -149,13 +149,15 @@ SettingsDialog::SettingsDialog(
     trackCheck->setChecked(trackFormat.contains("track"));
 
     backgroundImageEdit = new QLineEdit(this);
-    backgroundImageEdit->setPlaceholderText("background image/gif path");
 #if defined(_WIN32)
-    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("C:/Users/User/Pictures/picture.png")); // same length slashes, less work
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("background image/gif path (e.g. C:/Users/User/Pictures/picture.png)")); // same length slashes, less work
+    backgroundImageEdit->setPlaceholderText("background image/gif path (e.g. C:/Users/User/Pictures/picture.png)");
 #elif defined(__APPLE__)
-    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("/Users/username/Pictures"));
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("background image/gif path (e.g. /Users/username/Pictures/picture.png)"));
+    backgroundImageEdit->setPlaceholderText("background image/gif path (e.g. /Users/username/Pictures/picture.png)");
 #elif defined(__linux__)
-    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("/home/username/Pictures/picture.png"));
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("background image/gif path (e.g. /home/username/Pictures/picture.png)"));
+    backgroundImageEdit->setPlaceholderText("background image/gif path (e.g. /home/username/Pictures/picture.png)");
 #endif
     backgroundImageEdit->setText(backgroundImagePath);
 

@@ -1,9 +1,13 @@
 #define MINIAUDIO_IMPLEMENTATION
 
-// #define MA_ENABLE_VORBIS // not a free toggle, will require additional work
-
 #ifdef _WIN32
 #define MA_WIN32_USE_WCHAR
 #endif
 
+#define STB_VORBIS_HEADER_ONLY
+#include "stb_vorbis.c"
+#undef STB_VORBIS_HEADER_ONLY
+
 #include "miniaudio.h"
+
+#include "stb_vorbis.c"

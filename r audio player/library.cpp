@@ -1,4 +1,5 @@
 ﻿#include <filesystem>
+#include <fstream>
 #include <string>
 #include <algorithm>
 #include <set>
@@ -8,6 +9,8 @@
 #include <taglib/tpropertymap.h>
 #include <taglib/tag.h>
 #include <taglib/wavfile.h>
+#include <taglib/oggfile.h>
+#include <taglib/vorbisfile.h>
 
 #include "library.h"
 
@@ -18,6 +21,65 @@ static std::string u8ToString(const std::filesystem::path& p)
     auto u8 = p.u8string();
 
     return std::string(u8.begin(), u8.end());
+}
+
+static bool isVorbis(const std::filesystem::path& p)
+{
+#ifdef _WIN32
+    const std::wstring wp = p.wstring();
+
+    std::ifstream f(
+        wp,
+        std::ios::binary
+    );
+#else
+    std::ifstream f(
+        p,
+        std::ios::binary
+    );
+#endif
+    if (!f)
+    {
+        return false;
+    }
+
+    char buf[64]{};
+
+    f.read(
+        buf,
+        sizeof(buf)
+    );
+
+    const std::streamsize n = f.gcount();
+
+    if (n < 40)
+    {
+        return false;
+    }
+
+    if (!(buf[0] == 'O'
+        && buf[1] == 'g'
+        && buf[2] == 'g'
+        && buf[3] == 'S'))
+    {
+        return false;
+    }
+
+    for (int i = 0; i + 6 < (int)n; ++i)
+    {
+        if ((unsigned char)buf[i] == 0x01
+            && buf[i + 1] == 'v'
+            && buf[i + 2] == 'o'
+            && buf[i + 3] == 'r'
+            && buf[i + 4] == 'b'
+            && buf[i + 5] == 'i'
+            && buf[i + 6] == 's')
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 namespace
@@ -58,7 +120,8 @@ namespace
 
         return ext == ".wav"
             || ext == ".mp3"
-            || ext == ".flac";
+            || ext == ".flac"
+            || ext == ".ogg";
     }
 
     TagLib::FileRef openFileRef(const fs::path& p)
@@ -235,6 +298,12 @@ void Library::scanFolderRecursive(const fs::path& folder)
 
         const std::string ext = toLowerAscii(u8ToString(path.extension()));
 
+        if (ext == ".ogg"
+            && !isVorbis(path))
+        {
+            continue;
+        }
+
         Track track{};
 
         track.path = pathToUtf8String(path);
@@ -280,9 +349,54 @@ void Library::scanFolderRecursive(const fs::path& folder)
                     }
                 }
             }
-            else
+
+            if (artist.empty())
             {
                 continue;
+            }
+
+            track.artists = { artist };
+        }
+        else if (ext == ".ogg")
+        {
+#ifdef _WIN32
+            TagLib::Ogg::Vorbis::File file(path.wstring().c_str());
+#else
+            TagLib::Ogg::Vorbis::File file(u8ToString(path).c_str());
+#endif
+            if (!file.isValid())
+            {
+                continue;
+            }
+
+            std::string artist;
+
+            if (file.tag())
+            {
+                artist = trimAscii(toUtf8(file.tag()->artist()));
+
+                track.title = trimAscii(toUtf8(file.tag()->title()));
+                track.trackNo = file.tag()->track();
+                track.album = trimAscii(toUtf8(file.tag()->album()));
+            }
+
+            if (artist.empty()
+                && !track.title.empty())
+            {
+                const TagLib::PropertyMap props = file.properties();
+
+                for (auto itp = props.begin(); itp != props.end(); ++itp)
+                {
+                    const std::string key = toLowerAscii(toUtf8(itp->first));
+
+                    if (key.find("artist") != std::string::npos
+                        && !itp->second.isEmpty())
+                    {
+                        artist = trimAscii(toUtf8(itp->second.front()));
+
+                        break;
+                    }
+                }
             }
 
             if (artist.empty())

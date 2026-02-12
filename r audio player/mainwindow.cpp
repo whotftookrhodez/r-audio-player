@@ -28,6 +28,10 @@
 #include <taglib/id3v2tag.h>
 #include <taglib/mpegfile.h>
 #include <taglib/tag.h>
+#include <taglib/tbytevector.h>
+#include <taglib/tpropertymap.h>
+#include <taglib/vorbisfile.h>
+#include <taglib/xiphcomment.h>
 
 #include "clickslider.h"
 #include "folderdialog.h"
@@ -40,6 +44,7 @@ namespace
     {
         QWidget* host = nullptr;
         QMovie movie;
+        QSize lastScaled;
 
         explicit GifBackgroundFilter(QWidget* h, const QString& path)
             :
@@ -48,6 +53,7 @@ namespace
             movie(path)
         {
             setObjectName("__gif_bg_filter");
+            updateScale();
 
             movie.start();
 
@@ -65,6 +71,31 @@ namespace
             );
         }
 
+        void updateScale()
+        {
+            if (!host)
+            {
+                return;
+            }
+
+            const qreal dpr = host->devicePixelRatioF();
+
+            const QSize want = QSize(
+                int(std::round(host->width() * dpr)),
+                int(std::round(host->height() * dpr))
+            );
+
+            if (want.isEmpty()
+                || want == lastScaled)
+            {
+                return;
+            }
+
+            lastScaled = want;
+
+            movie.setScaledSize(want);
+        }
+
         bool eventFilter(QObject* obj, QEvent* e) override
         {
             if (!host
@@ -78,6 +109,12 @@ namespace
 
             switch (e->type())
             {
+            case QEvent::Show:
+            case QEvent::Resize:
+            case QEvent::WindowStateChange:
+                updateScale();
+
+                break;
             case QEvent::Paint:
             {
                 if (!movie.isValid())
@@ -94,18 +131,10 @@ namespace
 
                 if (!frame.isNull())
                 {
-                    const QSize target = host->size();
-
-                    const QPixmap scaled = frame.scaled(
-                        target,
-                        Qt::IgnoreAspectRatio,
-                        Qt::SmoothTransformation
-                    );
-
                     p.drawPixmap(
                         0,
                         0,
-                        scaled
+                        frame
                     );
                 }
 
@@ -1365,16 +1394,9 @@ void MainWindow::updateBackground()
             background-color: rgba(26, 26, 26, 128);
         }
 
-        #nowPlaying,
-        #nowPlayingContainer,
-        #autoplay,
-        #cursorSlider,
-        #cursorText,
-        #volumeSlider
-        {
-            background: transparent;
-        }
-
+        QListWidget::item:selected,
+        QListWidget::item:selected:!active,
+        QListWidget::item:hover,
         #backwardButton:hover,
         #playPauseButton:hover,
         #forwardButton:hover,
@@ -1384,7 +1406,17 @@ void MainWindow::updateBackground()
         #forwardButton:pressed,
         #settingsButton:pressed
         {
-            background-color: #333333;
+            background-color: rgba(51, 51, 51, 128);
+        }
+
+        #nowPlaying,
+        #nowPlayingContainer,
+        #autoplay,
+        #cursorSlider,
+        #cursorText,
+        #volumeSlider
+        {
+            background: transparent;
         }
     )";
 
@@ -1844,6 +1876,98 @@ static QPixmap loadEmbeddedCover(const QString& filePath)
                     pic->data().size()
                 )
             );
+        }
+    }
+
+    if (filePath.endsWith(".ogg", Qt::CaseInsensitive))
+    {
+#ifdef _WIN32
+        TagLib::Ogg::Vorbis::File f(path);
+#else
+        TagLib::Ogg::Vorbis::File f(path.constData());
+#endif
+
+        if (!f.isValid())
+        {
+            return {};
+        }
+
+        TagLib::Ogg::XiphComment* x = f.tag();
+
+        if (!x)
+        {
+            return {};
+        }
+
+        const auto props = x->properties();
+
+        auto getFirst =
+            [&](const char* key) -> QByteArray
+            {
+                const TagLib::String k(
+                    key,
+                    TagLib::String::UTF8
+                );
+
+                if (!props.contains(k))
+                {
+                    return {};
+                }
+
+                const TagLib::StringList sl = props.value(k);
+
+                if (sl.isEmpty())
+                {
+                    return {};
+                }
+
+                return QByteArray::fromStdString(sl.front().to8Bit(true));
+            };
+
+        const QByteArray b64 = getFirst("METADATA_BLOCK_PICTURE");
+
+        if (!b64.isEmpty())
+        {
+            const QByteArray decoded = QByteArray::fromBase64(b64);
+
+            if (!decoded.isEmpty())
+            {
+                TagLib::ByteVector bv(
+                    decoded.constData(),
+                    decoded.size()
+                );
+
+                TagLib::FLAC::Picture pic(bv);
+
+                const TagLib::ByteVector& data = pic.data();
+
+                if (!data.isEmpty())
+                {
+                    return QPixmap::fromImage(
+                        QImage::fromData(
+                            reinterpret_cast<const uchar*>(data.data()),
+                            data.size()
+                        )
+                    );
+                }
+            }
+        }
+
+        const QByteArray b64f = getFirst("COVERART");
+
+        if (!b64f.isEmpty())
+        {
+            const QByteArray decoded = QByteArray::fromBase64(b64f);
+
+            if (!decoded.isEmpty())
+            {
+                return QPixmap::fromImage(
+                    QImage::fromData(
+                        reinterpret_cast<const uchar*>(decoded.constData()),
+                        decoded.size()
+                    )
+                );
+            }
         }
     }
 
