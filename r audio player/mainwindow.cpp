@@ -271,6 +271,7 @@ namespace
     }
 }
 
+// could be better
 namespace
 {
     struct GifBackgroundFilter final : QObject
