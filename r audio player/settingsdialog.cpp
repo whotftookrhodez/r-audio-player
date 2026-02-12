@@ -33,6 +33,11 @@ QString SettingsDialog::selectedBackgroundImagePath() const
     return backgroundImageEdit->text().trimmed();
 }
 
+bool SettingsDialog::selectedFillBackground() const
+{
+    return fillBackgroundCheck->isChecked();
+}
+
 bool SettingsDialog::selectedIconButtons() const
 {
     return iconButtonsCheck->isChecked();
@@ -54,6 +59,7 @@ SettingsDialog::SettingsDialog(
     int coverSize,
     const QStringList& trackFormat,
     const QString& backgroundImagePath,
+    bool fillBackground,
     bool iconButtons,
     bool coverNewWindow,
     bool trackNumbers,
@@ -150,16 +156,19 @@ SettingsDialog::SettingsDialog(
 
     backgroundImageEdit = new QLineEdit(this);
 #if defined(_WIN32)
-    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("background image/gif path (e.g. C:/Users/User/Pictures/picture.png)")); // same length slashes, less work
-    backgroundImageEdit->setPlaceholderText("background image/gif path (e.g. C:/Users/User/Pictures/picture.png)");
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance(R"(background image/gif (e.g. C:\Users\User\Pictures\picture.png))")); // same length slashes, less work
+    backgroundImageEdit->setPlaceholderText(R"(background image/gif (e.g. C:\Users\User\Pictures\picture.png))");
 #elif defined(__APPLE__)
-    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("background image/gif path (e.g. /Users/username/Pictures/picture.png)"));
-    backgroundImageEdit->setPlaceholderText("background image/gif path (e.g. /Users/username/Pictures/picture.png)");
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("background image/gif (e.g. /Users/username/Pictures/picture.png)"));
+    backgroundImageEdit->setPlaceholderText("background image/gif (e.g. /Users/username/Pictures/picture.png)");
 #elif defined(__linux__)
-    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("background image/gif path (e.g. /home/username/Pictures/picture.png)"));
-    backgroundImageEdit->setPlaceholderText("background image/gif path (e.g. /home/username/Pictures/picture.png)");
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("background image/gif (e.g. /home/username/Pictures/picture.png)"));
+    backgroundImageEdit->setPlaceholderText("background image/gif (e.g. /home/username/Pictures/picture.png)");
 #endif
     backgroundImageEdit->setText(backgroundImagePath);
+
+    fillBackgroundCheck = new QCheckBox("fill background", this);
+    fillBackgroundCheck->setChecked(fillBackground);
 
     iconButtonsCheck = new QCheckBox("icon buttons", this);
     iconButtonsCheck->setChecked(iconButtons);
@@ -182,6 +191,7 @@ SettingsDialog::SettingsDialog(
     auto controlsLayout = new QHBoxLayout;
     //controlsLayout->addStretch();
     controlsLayout->addWidget(backgroundImageEdit);
+    controlsLayout->addWidget(fillBackgroundCheck);
     controlsLayout->addWidget(iconButtonsCheck);
     controlsLayout->addWidget(coverNewWindowCheck);
     controlsLayout->addWidget(trackNumbersCheck);

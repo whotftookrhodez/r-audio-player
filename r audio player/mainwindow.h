@@ -32,6 +32,7 @@ private:
     Library library;
     AudioPlayer audio;
 
+    QString mainStyleSheet;
     QLineEdit* search = nullptr;
     QString searchText;
     QVector<int> searchTrackOrder;
@@ -57,6 +58,8 @@ private:
     QTimer rescanDebounceTimer;
     QSet<QString> lastMountedRoots;
     QSet<QString> getLibraryMountRoots() const;
+
+    static const QString customBackgroundStyleSheet;
 
     int viewedAlbumIndex() const;
     int visibleRowForTrackIndex(int trackIndex) const;

@@ -19,6 +19,7 @@ public:
         int coverSize,
         const QStringList& trackFormat,
         const QString& backgroundImagePath,
+        bool fillBackground,
         bool iconButtons,
         bool coverNewWindow,
         bool trackNumbers,
@@ -34,6 +35,7 @@ public:
 
     QString selectedBackgroundImagePath() const;
 
+    bool selectedFillBackground() const;
     bool selectedIconButtons() const;
     bool selectedCoverNewWindow() const;
     bool selectedTrackNumbers() const;
@@ -61,6 +63,7 @@ private:
     QCheckBox* albumCheck = nullptr;
     QCheckBox* trackCheck = nullptr;
     QLineEdit* backgroundImageEdit = nullptr;
+    QCheckBox* fillBackgroundCheck = nullptr;
     QCheckBox* iconButtonsCheck = nullptr;
     QCheckBox* coverNewWindowCheck = nullptr;
     QCheckBox* trackNumbersCheck = nullptr;

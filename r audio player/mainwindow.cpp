@@ -40,17 +40,252 @@
 
 namespace
 {
+    struct ImageBackgroundFilter final : QObject
+    {
+        QWidget* host = nullptr;
+        bool fill = false;
+
+        QPixmap source;
+        QPixmap cached;
+        QSize lastTargetPx;
+
+        ImageBackgroundFilter(QWidget* h, const QString& path, bool fillBackground)
+            :
+            QObject(h),
+            host(h),
+            fill(fillBackground)
+        {
+            setObjectName("__img_bg_filter");
+
+            if (!path.isEmpty()
+                && QFileInfo::exists(path))
+            {
+                QPixmap p;
+                p.load(path);
+
+                source = p;
+            }
+
+            rebuildCache();
+
+            if (host)
+            {
+                host->update();
+            }
+        }
+
+        void updateFill(bool v)
+        {
+            if (fill == v)
+            {
+                return;
+            }
+
+            fill = v;
+
+            cached = QPixmap();
+            lastTargetPx = QSize();
+
+            rebuildCache();
+
+            if (host)
+            {
+                host->update();
+            }
+        }
+
+        void rebuildCache()
+        {
+            if (!host)
+            {
+                return;
+            }
+
+            if (source.isNull())
+            {
+                cached = QPixmap();
+                lastTargetPx = QSize();
+
+                return;
+            }
+
+            const qreal dpr = host->devicePixelRatioF();
+
+            const QSize targetPx(
+                int(std::round(host->width() * dpr)),
+                int(std::round(host->height() * dpr))
+            );
+
+            if (targetPx.isEmpty()
+                || targetPx == lastTargetPx)
+            {
+                return;
+            }
+
+            lastTargetPx = targetPx;
+
+            const int dw = targetPx.width();
+            const int dh = targetPx.height();
+
+            if (!fill)
+            {
+                QPixmap scaled = source.scaled(
+                    targetPx,
+                    Qt::IgnoreAspectRatio,
+                    Qt::SmoothTransformation
+                );
+
+                scaled.setDevicePixelRatio(dpr);
+
+                cached = scaled;
+
+                return;
+            }
+
+            const int sw = source.width();
+            const int sh = source.height();
+
+            if (sw <= 0
+                || sh <= 0
+                || dw <= 0
+                || dh <= 0)
+            {
+                cached = QPixmap();
+
+                return;
+            }
+
+            QRect src;
+
+            if (sw * dh > dw * sh)
+            {
+                const int cw = sh * dw / dh;
+                const int x = (sw - cw) / 2;
+
+                src = QRect(x, 0, cw, sh);
+            }
+            else
+            {
+                const int ch = sw * dh / dw;
+                const int y = (sh - ch) / 2;
+
+                src = QRect(0, y, sw, ch);
+            }
+
+            QPixmap cropped = source.copy(src);
+
+            QPixmap scaled = cropped.scaled(
+                targetPx,
+                Qt::IgnoreAspectRatio,
+                Qt::SmoothTransformation
+            );
+
+            scaled.setDevicePixelRatio(dpr);
+
+            cached = scaled;
+        }
+
+        bool eventFilter(QObject* obj, QEvent* e) override
+        {
+            if (!host
+                || obj != host)
+            {
+                return QObject::eventFilter(
+                    obj,
+                    e
+                );
+            }
+
+            switch (e->type())
+            {
+            case QEvent::Show:
+            case QEvent::Resize:
+            case QEvent::WindowStateChange:
+                rebuildCache();
+
+                break;
+            case QEvent::Paint:
+            {
+                if (cached.isNull())
+                {
+                    break;
+                }
+
+                auto* pe = static_cast<QPaintEvent*>(e);
+
+                QPainter p(host);
+                p.setClipRegion(pe->region());
+                p.drawPixmap(
+                    0,
+                    0,
+                    cached
+                );
+
+                break;
+            }
+
+            default:
+                break;
+            }
+
+            return QObject::eventFilter(
+                obj,
+                e
+            );
+        }
+    };
+
+    static void updateImageBackground(QWidget* host, const QString& path, bool fillBackground)
+    {
+        const QObjectList children = host->children();
+
+        for (QObject* o : children)
+        {
+            if (!o)
+            {
+                continue;
+            }
+
+            if (o->objectName() == "__img_bg_filter")
+            {
+                auto* f = static_cast<ImageBackgroundFilter*>(o);
+
+                host->removeEventFilter(f);
+
+                f->deleteLater();
+            }
+        }
+
+        if (path.isEmpty()
+            || !QFileInfo::exists(path))
+        {
+            host->update();
+
+            return;
+        }
+
+        auto* filter = new ImageBackgroundFilter(host, path, fillBackground);
+
+        host->installEventFilter(filter);
+        host->update();
+    }
+}
+
+namespace
+{
     struct GifBackgroundFilter final : QObject
     {
         QWidget* host = nullptr;
         QMovie movie;
         QSize lastScaled;
+        bool fill = false;
 
-        explicit GifBackgroundFilter(QWidget* h, const QString& path)
+        GifBackgroundFilter(QWidget* h, const QString& path, bool fillBackground)
             :
             QObject(h),
             host(h),
-            movie(path)
+            movie(path),
+            fill(fillBackground)
         {
             setObjectName("__gif_bg_filter");
             updateScale();
@@ -71,6 +306,25 @@ namespace
             );
         }
 
+        void updateFill(bool v)
+        {
+            if (fill == v)
+            {
+                return;
+            }
+
+            fill = v;
+
+            lastScaled = QSize();
+
+            updateScale();
+
+            if (host)
+            {
+                host->update();
+            }
+        }
+
         void updateScale()
         {
             if (!host)
@@ -78,9 +332,16 @@ namespace
                 return;
             }
 
+            if (fill)
+            {
+                movie.setScaledSize(QSize());
+
+                return;
+            }
+
             const qreal dpr = host->devicePixelRatioF();
 
-            const QSize want = QSize(
+            const QSize want(
                 int(std::round(host->width() * dpr)),
                 int(std::round(host->height() * dpr))
             );
@@ -129,12 +390,72 @@ namespace
 
                 const QPixmap frame = movie.currentPixmap();
 
-                if (!frame.isNull())
+                if (frame.isNull())
+                {
+                    break;
+                }
+
+                const QRect dst(
+                    0,
+                    0,
+                    host->width(),
+                    host->height()
+                );
+
+                if (!fill)
                 {
                     p.drawPixmap(
                         0,
                         0,
                         frame
+                    );
+                }
+                else
+                {
+                    const int sw = frame.width();
+                    const int sh = frame.height();
+                    const int dw = dst.width();
+                    const int dh = dst.height();
+
+                    if (sw <= 0
+                        || sh <= 0
+                        || dw <= 0
+                        || dh <= 0)
+                    {
+                        break;
+                    }
+
+                    QRect src;
+
+                    if (sw * dh > dw * sh)
+                    {
+                        const int cw = sh * dw / dh;
+                        const int x = (sw - cw) / 2;
+
+                        src = QRect(
+                            x,
+                            0,
+                            cw,
+                            sh
+                        );
+                    }
+                    else
+                    {
+                        const int ch = sw * dh / dw;
+                        const int y = (sh - ch) / 2;
+
+                        src = QRect(
+                            0,
+                            y,
+                            sw,
+                            ch
+                        );
+                    }
+
+                    p.drawPixmap(
+                        dst,
+                        frame,
+                        src
                     );
                 }
 
@@ -152,7 +473,7 @@ namespace
         }
     };
 
-    static void updateAnimatedBackground(QWidget* host, const QString& path)
+    static void updateAnimatedBackground(QWidget* host, const QString& path, bool fillBackground)
     {
         const QObjectList children = host->children();
 
@@ -183,7 +504,8 @@ namespace
 
         auto* filter = new GifBackgroundFilter(
             host,
-            path
+            path,
+            fillBackground
         );
 
         host->installEventFilter(filter);
@@ -866,6 +1188,8 @@ MainWindow::MainWindow(Settings* s) : settings(s)
         }
     )");
 
+    mainStyleSheet = qApp->styleSheet();
+
     setObjectName("mw");
     setAttribute(Qt::WA_StyledBackground, true);
 
@@ -1340,6 +1664,44 @@ void MainWindow::updateControlsText()
     }
 }
 
+const QString MainWindow::customBackgroundStyleSheet = R"(
+    #search,
+    #albums,
+    #tracks,
+    #backwardButton,
+    #playPauseButton,
+    #forwardButton,
+    #settingsButton
+    {
+        background-color: rgba(26, 26, 26, 128);
+    }
+
+    QListWidget::item:selected,
+    QListWidget::item:selected:!active,
+    QListWidget::item:hover,
+    #backwardButton:hover,
+    #playPauseButton:hover,
+    #forwardButton:hover,
+    #settingsButton:hover,
+    #backwardButton:pressed,
+    #playPauseButton:pressed,
+    #forwardButton:pressed,
+    #settingsButton:pressed
+    {
+        background-color: rgba(51, 51, 51, 128);
+    }
+
+    #nowPlaying,
+    #nowPlayingContainer,
+    #autoplay,
+    #cursorSlider,
+    #cursorText,
+    #volumeSlider
+    {
+        background: transparent;
+    }
+)";
+
 void MainWindow::updateBackground()
 {
     const QString p = settings->backgroundImagePath;
@@ -1351,7 +1713,14 @@ void MainWindow::updateBackground()
 
         updateAnimatedBackground(
             this,
-            QString()
+            QString(),
+            false
+        );
+
+        updateImageBackground(
+            this,
+            QString(),
+            false
         );
 
         return;
@@ -1363,64 +1732,34 @@ void MainWindow::updateBackground()
     {
         setStyleSheet("");
 
+        updateImageBackground(
+            this,
+            QString(),
+            false
+        );
+
         updateAnimatedBackground(
             this,
-            p
+            p,
+            settings->fillBackground
         );
     }
     else
     {
         updateAnimatedBackground(
             this,
-            QString()
+            QString(),
+            false
         );
 
-        QString fp = QFileInfo(p).absoluteFilePath();
-
-        fp.replace('\\', '/');
-
-        setStyleSheet("#mw { border-image: url(\"" + fp + "\") 0 0 0 0 stretch stretch; }");
+        updateImageBackground(
+            this,
+            p,
+            settings->fillBackground
+        );
     }
 
-    const QString customBackgroundStyleSheet = R"(
-        #search,
-        #albums,
-        #tracks,
-        #backwardButton,
-        #playPauseButton,
-        #forwardButton,
-        #settingsButton
-        {
-            background-color: rgba(26, 26, 26, 128);
-        }
-
-        QListWidget::item:selected,
-        QListWidget::item:selected:!active,
-        QListWidget::item:hover,
-        #backwardButton:hover,
-        #playPauseButton:hover,
-        #forwardButton:hover,
-        #settingsButton:hover,
-        #backwardButton:pressed,
-        #playPauseButton:pressed,
-        #forwardButton:pressed,
-        #settingsButton:pressed
-        {
-            background-color: rgba(51, 51, 51, 128);
-        }
-
-        #nowPlaying,
-        #nowPlayingContainer,
-        #autoplay,
-        #cursorSlider,
-        #cursorText,
-        #volumeSlider
-        {
-            background: transparent;
-        }
-    )";
-
-    qApp->setStyleSheet(qApp->styleSheet() + customBackgroundStyleSheet);
+    qApp->setStyleSheet(mainStyleSheet + customBackgroundStyleSheet);
 }
 
 static QString joinArtists(const std::vector<std::string>& artists)
@@ -1692,6 +2031,7 @@ void MainWindow::openSettings()
         settings->coverSize,
         settings->trackFormat,
         settings->backgroundImagePath,
+        settings->fillBackground,
         settings->iconButtons,
         settings->coverNewWindow,
         settings->trackNumbers,
@@ -1768,6 +2108,7 @@ void MainWindow::openSettings()
     settings->coverSize = dlg.selectedCoverSize();
     settings->trackFormat = dlg.selectedTrackFormat();
     settings->backgroundImagePath = dlg.selectedBackgroundImagePath();
+    settings->fillBackground = dlg.selectedFillBackground();
     settings->iconButtons = dlg.selectedIconButtons();
     settings->coverNewWindow = dlg.selectedCoverNewWindow();
     settings->trackNumbers = dlg.selectedTrackNumbers();
