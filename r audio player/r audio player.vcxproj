@@ -149,6 +149,7 @@
     <ClCompile Include="mainwindow.cpp" />
     <ClCompile Include="miniaudio_implementation.cpp" />
     <ClCompile Include="settingsdialog.cpp" />
+    <ClCompile Include="stb_vorbis.c" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

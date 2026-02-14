@@ -202,7 +202,7 @@ namespace
 
     std::string pathToUtf8String(const fs::path& p)
     {
-        return u8ToString(p); // possibly unsafe
+        return u8ToString(p);
     }
 }
 

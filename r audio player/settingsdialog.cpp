@@ -156,7 +156,7 @@ SettingsDialog::SettingsDialog(
 
     backgroundImageEdit = new QLineEdit(this);
 #if defined(_WIN32)
-    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance(R"(background image/gif (e.g. C:\Users\User\Pictures\picture.png))")); // same length slashes, less work
+    backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance(R"(background image/gif (e.g. C:\Users\User\Pictures\picture.png))"));
     backgroundImageEdit->setPlaceholderText(R"(background image/gif (e.g. C:\Users\User\Pictures\picture.png))");
 #elif defined(__APPLE__)
     backgroundImageEdit->setMinimumWidth(backgroundImageEdit->fontMetrics().horizontalAdvance("background image/gif (e.g. /Users/username/Pictures/picture.png)"));

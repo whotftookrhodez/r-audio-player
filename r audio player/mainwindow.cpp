@@ -271,7 +271,6 @@ namespace
     }
 }
 
-// could be better
 namespace
 {
     struct GifBackgroundFilter final : QObject
@@ -1245,6 +1244,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
 
     nowPlaying = new QLabel("nothing playing", this);
     nowPlaying->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
+    nowPlaying->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     auto nowPlayingLayout = new QHBoxLayout;
     nowPlayingLayout->setSpacing(6);
@@ -1484,6 +1484,20 @@ MainWindow::MainWindow(Settings* s) : settings(s)
 
     connect(
         cursorSlider,
+        &QSlider::valueChanged,
+        this,
+        [&](int v)
+        {
+            if (audio._soundInit()
+                && cursorSlider->isSliderDown())
+            {
+                audio.seek((v / double(cursorSlider->maximum())) * audio.length());
+            }
+        }
+    );
+
+    connect(
+        cursorSlider,
         &QSlider::sliderMoved,
         this,
         [&](int v)
@@ -1544,7 +1558,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
                     }
                 }
 
-                if (audio.finished()) // questionable (repeats)
+                if (audio.finished())
                 {
                     if (settings->autoplay)
                     {
@@ -1669,6 +1683,7 @@ const QString MainWindow::customBackgroundStyleSheet = R"(
     #search,
     #albums,
     #tracks,
+    #nowPlaying,
     #backwardButton,
     #playPauseButton,
     #forwardButton,
@@ -1692,7 +1707,11 @@ const QString MainWindow::customBackgroundStyleSheet = R"(
         background-color: rgba(51, 51, 51, 128);
     }
 
-    #nowPlaying,
+    #nowPlaying
+    {
+        padding: 3px 5px;
+    }
+
     #nowPlayingContainer,
     #autoplay,
     #cursorSlider,

@@ -2,6 +2,7 @@
 
 #include <QSlider>
 #include <QMouseEvent>
+#include <QStyleOptionSlider>
 #include <QStyle>
 
 class ClickSlider : public QSlider
@@ -13,6 +14,24 @@ protected:
     {
         if (e->button() == Qt::LeftButton)
         {
+            QStyleOptionSlider opt;
+
+            initStyleOption(&opt);
+
+            const QRect handle = style()->subControlRect(
+                QStyle::CC_Slider,
+                &opt,
+                QStyle::SC_SliderHandle,
+                this
+            );
+
+            if (handle.contains(e->pos()))
+            {
+                QSlider::mousePressEvent(e);
+
+                return;
+            }
+
             int val;
 
             if (orientation() == Qt::Horizontal)
@@ -34,10 +53,22 @@ protected:
                 );
             }
 
+            setSliderDown(true);
+            setSliderPosition(val);
             setValue(val);
-            e->accept();
+
+            QSlider::mousePressEvent(e);
+
+            return;
         }
 
         QSlider::mousePressEvent(e);
+    }
+
+    void mouseReleaseEvent(QMouseEvent* e) override
+    {
+        QSlider::mouseReleaseEvent(e);
+
+        setSliderDown(false);
     }
 };

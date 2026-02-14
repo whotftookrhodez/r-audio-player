@@ -304,5 +304,5 @@ void FolderDialog::updateButtons()
         && model->isDir(index);
 
     addButton->setEnabled(validFolder);
-    continueButton->setEnabled(true); // questionable
+    continueButton->setEnabled(true);
 }

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(r_audio_player
-    VERSION 1.0.6
+    VERSION 1.0.7
     LANGUAGES CXX
 )
 
