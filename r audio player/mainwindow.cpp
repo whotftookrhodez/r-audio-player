@@ -214,7 +214,6 @@ namespace
                 auto* pe = static_cast<QPaintEvent*>(e);
 
                 QPainter p(host);
-                p.setClipRegion(pe->region());
                 p.drawPixmap(
                     0,
                     0,
@@ -279,6 +278,10 @@ namespace
         QMovie movie;
         QSize lastScaled;
         bool fill = false;
+        QSize lastHostSize;
+        QSize lastFrameSize;
+        QRect cachedSrc;
+        QRect cachedDst;
 
         GifBackgroundFilter(QWidget* h, const QString& path, bool fillBackground)
             :
@@ -298,12 +301,102 @@ namespace
                 this,
                 [this]
                 {
+                    updateGeometry();
+
                     if (host)
                     {
                         host->update();
                     }
                 }
             );
+        }
+
+        void updateGeometry()
+        {
+            if (!host
+                || !movie.isValid())
+            {
+                return;
+            }
+
+            const QSize hostSize = host->size();
+
+            if (hostSize.isEmpty())
+            {
+                return;
+            }
+
+            const QSize frameSize = movie.currentImage().size();
+
+            if (hostSize == lastHostSize
+                && frameSize == lastFrameSize)
+            {
+                return;
+            }
+
+            lastHostSize = hostSize;
+            lastFrameSize = frameSize;
+
+            cachedDst = QRect(
+                QPoint(
+                    0,
+                    0
+                ),
+
+                hostSize
+            );
+
+            if (!fill)
+            {
+                cachedSrc = QRect(
+                    QPoint(
+                        0,
+                        0
+                    ),
+
+                    frameSize
+                );
+
+                return;
+            }
+
+            const int sw = frameSize.width();
+            const int sh = frameSize.height();
+            const int dw = hostSize.width();
+            const int dh = hostSize.height();
+
+            if (sw <= 0
+                || sh <= 0
+                || dw <= 0
+                || dh <= 0)
+            {
+                return;
+            }
+
+            if (sw * dh > dw * sh)
+            {
+                const int cw = sh * dw / dh;
+                const int x = (sw - cw) / 2;
+
+                cachedSrc = QRect(
+                    x,
+                    0,
+                    cw,
+                    sh
+                );
+            }
+            else
+            {
+                const int ch = sw * dh / dw;
+                const int y = (sh - ch) / 2;
+
+                cachedSrc = QRect(
+                    0,
+                    y,
+                    sw,
+                    ch
+                );
+            }
         }
 
         void updateFill(bool v)
@@ -316,8 +409,11 @@ namespace
             fill = v;
 
             lastScaled = QSize();
+            lastHostSize = QSize();
+            lastFrameSize = QSize();
 
             updateScale();
+            updateGeometry();
 
             if (host)
             {
@@ -357,6 +453,29 @@ namespace
             movie.setScaledSize(want);
         }
 
+        void updateMovieState()
+        {
+            if (!host)
+            {
+                return;
+            }
+
+            const bool start = host->isVisible()
+                && !host->isMinimized();
+
+            if (start)
+            {
+                if (movie.state() != QMovie::Running)
+                {
+                    movie.start();
+                }
+            }
+            else if (movie.state() != QMovie::NotRunning)
+            {
+                movie.stop();
+            }
+        }
+
         bool eventFilter(QObject* obj, QEvent* e) override
         {
             if (!host
@@ -371,22 +490,25 @@ namespace
             switch (e->type())
             {
             case QEvent::Show:
-            case QEvent::Resize:
+            case QEvent::Hide:
             case QEvent::WindowStateChange:
+                updateMovieState();
+
+                break;
+            case QEvent::Resize:
                 updateScale();
+                updateGeometry();
 
                 break;
             case QEvent::Paint:
             {
-                if (!movie.isValid())
+                if (!movie.isValid()
+                    || movie.state() != QMovie::Running)
                 {
                     break;
                 }
 
-                auto* pe = static_cast<QPaintEvent*>(e);
-
                 QPainter p(host);
-                p.setClipRegion(pe->region());
 
                 const QPixmap frame = movie.currentPixmap();
 
@@ -394,13 +516,6 @@ namespace
                 {
                     break;
                 }
-
-                const QRect dst(
-                    0,
-                    0,
-                    host->width(),
-                    host->height()
-                );
 
                 if (!fill)
                 {
@@ -412,50 +527,10 @@ namespace
                 }
                 else
                 {
-                    const int sw = frame.width();
-                    const int sh = frame.height();
-                    const int dw = dst.width();
-                    const int dh = dst.height();
-
-                    if (sw <= 0
-                        || sh <= 0
-                        || dw <= 0
-                        || dh <= 0)
-                    {
-                        break;
-                    }
-
-                    QRect src;
-
-                    if (sw * dh > dw * sh)
-                    {
-                        const int cw = sh * dw / dh;
-                        const int x = (sw - cw) / 2;
-
-                        src = QRect(
-                            x,
-                            0,
-                            cw,
-                            sh
-                        );
-                    }
-                    else
-                    {
-                        const int ch = sw * dh / dw;
-                        const int y = (sh - ch) / 2;
-
-                        src = QRect(
-                            0,
-                            y,
-                            sw,
-                            ch
-                        );
-                    }
-
                     p.drawPixmap(
-                        dst,
+                        cachedDst,
                         frame,
-                        src
+                        cachedSrc
                     );
                 }
 
@@ -1191,6 +1266,9 @@ MainWindow::MainWindow(Settings* s) : settings(s)
     mainStyleSheet = qApp->styleSheet();
 
     setObjectName("mw");
+
+    setAttribute(Qt::WA_NoSystemBackground);
+    setAttribute(Qt::WA_OpaquePaintEvent);
     setAttribute(Qt::WA_StyledBackground, true);
 
     audio.init();
@@ -1387,15 +1465,7 @@ MainWindow::MainWindow(Settings* s) : settings(s)
         tracks,
         &QListWidget::itemDoubleClicked,
         this,
-        [&]
-        {
-            auto* item = tracks->currentItem();
-
-            play(
-                selAlbum,
-                item->data(Qt::UserRole).toInt()
-            );
-        }
+        &MainWindow::playSelected
     );
 
     connect(
@@ -1729,7 +1799,10 @@ void MainWindow::updateBackground()
     if (p.isEmpty()
         || !QFileInfo::exists(p))
     {
-        setStyleSheet(""); // return to default stylesheet
+        setAttribute(Qt::WA_NoSystemBackground, false);
+        setAttribute(Qt::WA_OpaquePaintEvent, false);
+
+        qApp->setStyleSheet(mainStyleSheet);
 
         updateAnimatedBackground(
             this,
@@ -1742,6 +1815,9 @@ void MainWindow::updateBackground()
             QString(),
             false
         );
+
+        update();
+        repaint();
 
         return;
     }
@@ -1927,9 +2003,6 @@ void MainWindow::play(int a, int t)
     {
         t = 0;
     }
-
-    playingFromSearch = !searchText.isEmpty()
-        && !albumMatchedByAlbum.contains(a);
 
     selAlbum = a;
     selTrack = t;

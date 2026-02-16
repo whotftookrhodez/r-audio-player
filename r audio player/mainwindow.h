@@ -85,7 +85,6 @@ private:
     double scrobbleThreshold = 0.9;
 
     bool scrobbledThisTrack = false;
-    bool playingFromSearch = false;
     bool showCoverEnabled() const;
     bool rebindCurrentByPath(const QString& path);
 };
